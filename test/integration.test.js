@@ -43,9 +43,9 @@ suite('Client Integration', () => {
     const guestSharedBuffer = await guest.joinSharedBuffer(hostSharedBuffer.id, guestBuffer)
     assert.equal(guestBuffer.getText(), 'hello world')
 
-    hostSharedBuffer.apply(hostBuffer.insert(5, ' cruel'))
-    guestSharedBuffer.apply(guestBuffer.delete(0, 5))
-    guestSharedBuffer.apply(guestBuffer.insert(0, 'goodbye'))
+    hostSharedBuffer.apply(hostBuffer.insert({row: 0, column: 5}, ' cruel'))
+    guestSharedBuffer.apply(guestBuffer.delete({row: 0, column: 0}, {row: 0, column: 5}))
+    guestSharedBuffer.apply(guestBuffer.insert({row: 0, column: 0}, 'goodbye'))
 
     await hostBuffer.whenTextEquals('goodbye cruel world')
     await guestBuffer.whenTextEquals('goodbye cruel world')

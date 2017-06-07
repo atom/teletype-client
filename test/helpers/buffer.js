@@ -49,17 +49,22 @@ class Buffer {
   }
 
   insert (position, text) {
-    this.text = this.text.slice(0, position) + text + this.text.slice(position)
+    const index = characterIndexForPosition(this.text, position)
+    this.text = this.text.slice(0, index) + text + this.text.slice(index)
     this.resolveOnTextEquality()
     return {type: 'insert', position, text}
   }
 
-  delete (position, extent) {
-    assert(position < this.text.length)
-    assert(position + extent <= this.text.length)
-    this.text = this.text.slice(0, position) + this.text.slice(position + extent)
+  delete (startPosition, extent) {
+    const endPosition = traverse(startPosition, extent)
+    const textExtent = extentForText(this.text)
+    assert(compare(startPosition, textExtent) < 0)
+    assert(compare(endPosition, textExtent) <= 0)
+    const startIndex = characterIndexForPosition(this.text, startPosition)
+    const endIndex = characterIndexForPosition(this.text, endPosition)
+    this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
     this.resolveOnTextEquality()
-    return {type: 'delete', position, extent}
+    return {type: 'delete', position: startPosition, extent}
   }
 
   resolveOnTextEquality () {
@@ -69,4 +74,55 @@ class Buffer {
     }
     this.textEqualityResolvers.delete(this.text)
   }
+}
+
+function compare (a, b) {
+  if (a.row === b.row) {
+    return a.column - b.column
+  } else {
+    return a.row - b.row
+  }
+}
+
+function traverse (start, distance) {
+  if (distance.row === 0)
+    return {row: start.row, column: start.column + distance.column}
+  else {
+    return {row: start.row + distance.row, column: distance.column}
+  }
+}
+
+function extentForText (text) {
+  let row = 0
+  let column = 0
+  let index = 0
+  while (index < text.length) {
+    const char = text[index]
+    if (char === '\n') {
+      column = 0
+      row++
+    } else {
+      column++
+    }
+    index++
+  }
+
+  return {row, column}
+}
+
+function characterIndexForPosition (text, target) {
+  const position = {row: 0, column: 0}
+  let index = 0
+  while (compare(position, target) < 0 && index < text.length) {
+    if (text[index] === '\n') {
+      position.row++
+      position.column = 0
+    } else {
+      position.column++
+    }
+
+    index++
+  }
+
+  return index
 }
