@@ -10,6 +10,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
+    "msgpack-lite": "^0.1.26",
     "pusher-js": "^4.1.0"
   },
   "devDependencies": {
