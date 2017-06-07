@@ -3,7 +3,7 @@ const assert = require('assert')
 const Buffer = require('./helpers/buffer')
 const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
-const {startTestServer} = require('real-time-server')
+const {startTestServer} = require('@atom-team/real-time-server')
 
 suite('Client Integration', () => {
   let server
