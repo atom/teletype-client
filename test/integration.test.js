@@ -9,7 +9,10 @@ suite('Client Integration', () => {
   let server
 
   suiteSetup(async () => {
-    const params = {databaseURL: process.env.TEST_DATABASE_URL}
+    const params = {
+      databaseURL: process.env.TEST_DATABASE_URL,
+      maxMessageSizeInBytes: 100
+    }
     // Uncomment and provide credentials to test against Pusher.
     // params.pusherCredentials = {
     //   appId: '123',
