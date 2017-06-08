@@ -9,8 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom-team/tachyon": "^0.1.0",
-    "msgpack-lite": "^0.1.26",
+    "@atom-team/tachyon": "^0.1.1",
     "pusher-js": "^4.1.0"
   },
   "devDependencies": {
