@@ -36,7 +36,8 @@ suite('Client Integration', () => {
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
     const hostBuffer = new Buffer('hello world')
-    const hostSharedBuffer = await host.createSharedBuffer(hostBuffer)
+    const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', delegate: hostBuffer})
+    assert.equal(hostSharedBuffer.uri, 'uri-1')
 
     const guest = new Client({
       restGateway: server.restGateway,
@@ -44,6 +45,7 @@ suite('Client Integration', () => {
     })
     const guestBuffer = new Buffer('')
     const guestSharedBuffer = await guest.joinSharedBuffer(hostSharedBuffer.id, guestBuffer)
+    assert.equal(guestSharedBuffer.uri, 'uri-1')
     assert.equal(guestBuffer.getText(), 'hello world')
 
     hostSharedBuffer.apply(hostBuffer.insert({row: 0, column: 5}, ' cruel'))
