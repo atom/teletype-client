@@ -1,6 +1,7 @@
 require('./setup')
 const assert = require('assert')
 const Buffer = require('./helpers/buffer')
+const Editor = require('./helpers/editor')
 const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom-team/real-time-server')
@@ -30,21 +31,30 @@ suite('Client Integration', () => {
     return server.reset()
   })
 
-  test('sharing a buffer from a host and fetching its initial state from a guest', async () => {
+  test('sharing an editor from a host and fetching its initial state from a guest', async () => {
     const host = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
     const hostBuffer = new Buffer('hello world')
     const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', delegate: hostBuffer})
+    const hostSharedEditor = await host.createSharedEditor({
+      sharedBuffer: hostSharedBuffer
+    })
     assert.equal(hostSharedBuffer.uri, 'uri-1')
+    assert.equal(hostSharedEditor.sharedBuffer, hostSharedBuffer)
 
     const guest = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
-    const guestBuffer = new Buffer('')
-    const guestSharedBuffer = await guest.joinSharedBuffer(hostSharedBuffer.id, guestBuffer)
+    const guestBuffer = new Buffer()
+    const guestEditor = new Editor()
+    const guestSharedEditor = await guest.joinSharedEditor(hostSharedEditor.id)
+    guestSharedEditor.setDelegate(guestEditor)
+
+    const guestSharedBuffer = guestSharedEditor.sharedBuffer
+    guestSharedBuffer.setDelegate(guestBuffer)
     assert.equal(guestSharedBuffer.uri, 'uri-1')
     assert.equal(guestBuffer.getText(), 'hello world')
 
@@ -52,7 +62,13 @@ suite('Client Integration', () => {
     guestSharedBuffer.apply(guestBuffer.delete({row: 0, column: 0}, {row: 0, column: 5}))
     guestSharedBuffer.apply(guestBuffer.insert({row: 0, column: 0}, 'goodbye'))
 
-    await hostBuffer.whenTextEquals('goodbye cruel world')
-    await guestBuffer.whenTextEquals('goodbye cruel world')
+    await condition(() => hostBuffer.text === 'goodbye cruel world')
+    await condition(() => guestBuffer.text === 'goodbye cruel world')
   })
 })
+
+function condition (fn) {
+  return new Promise((resolve) => {
+    setInterval(() => { if (fn()) resolve() }, 5)
+  })
+}
