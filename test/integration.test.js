@@ -1,5 +1,6 @@
 require('./setup')
 const assert = require('assert')
+const deepEqual = require('deep-equal')
 const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
 const Client = require('../lib/real-time-client')
@@ -39,7 +40,11 @@ suite('Client Integration', () => {
     const hostBuffer = new Buffer('hello world')
     const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', delegate: hostBuffer})
     const hostSharedEditor = await host.createSharedEditor({
-      sharedBuffer: hostSharedBuffer
+      sharedBuffer: hostSharedBuffer,
+      selectionRanges: [
+        {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+        {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+      ]
     })
     assert.equal(hostSharedBuffer.uri, 'uri-1')
     assert.equal(hostSharedEditor.sharedBuffer, hostSharedBuffer)
@@ -52,6 +57,10 @@ suite('Client Integration', () => {
     const guestEditor = new Editor()
     const guestSharedEditor = await guest.joinSharedEditor(hostSharedEditor.id)
     guestSharedEditor.setDelegate(guestEditor)
+    assert.deepEqual(guestEditor.selectionRanges, [
+      {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+      {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    ])
 
     const guestSharedBuffer = guestSharedEditor.sharedBuffer
     guestSharedBuffer.setDelegate(guestBuffer)
@@ -64,6 +73,11 @@ suite('Client Integration', () => {
 
     await condition(() => hostBuffer.text === 'goodbye cruel world')
     await condition(() => guestBuffer.text === 'goodbye cruel world')
+
+    hostSharedEditor.setSelectionRanges([{start: {row: 0, column: 6}, end: {row: 0, column: 11}}])
+    await condition(() => {
+      return deepEqual(guestEditor.selectionRanges, hostSharedEditor.selectionRanges)
+    })
   })
 })
 
