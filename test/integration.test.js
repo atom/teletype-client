@@ -38,7 +38,8 @@ suite('Client Integration', () => {
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
     const hostBuffer = new Buffer('hello world')
-    const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', delegate: hostBuffer})
+    const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', text: hostBuffer.text})
+    hostSharedBuffer.setDelegate(hostBuffer)
     const hostSharedEditor = await host.createSharedEditor({
       sharedBuffer: hostSharedBuffer,
       selectionRanges: [
