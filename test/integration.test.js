@@ -42,13 +42,14 @@ suite('Client Integration', () => {
     hostSharedBuffer.setDelegate(hostBuffer)
     const hostSharedEditor = await host.createSharedEditor({
       sharedBuffer: hostSharedBuffer,
-      selectionRanges: [
-        {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
-        {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
-      ]
+      selectionRanges: {
+        1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+        2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+      }
     })
-    assert.equal(hostSharedBuffer.uri, 'uri-1')
-    assert.equal(hostSharedEditor.sharedBuffer, hostSharedBuffer)
+
+    const hostEditor = new Editor()
+    hostSharedEditor.setDelegate(hostEditor)
 
     const guest = new Client({
       restGateway: server.restGateway,
@@ -58,10 +59,10 @@ suite('Client Integration', () => {
     const guestEditor = new Editor()
     const guestSharedEditor = await guest.joinSharedEditor(hostSharedEditor.id)
     guestSharedEditor.setDelegate(guestEditor)
-    assert.deepEqual(guestEditor.selectionRanges, [
-      {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
-      {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
-    ])
+    assert.deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {
+      1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+      2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    })
 
     const guestSharedBuffer = guestSharedEditor.sharedBuffer
     guestSharedBuffer.setDelegate(guestBuffer)
@@ -75,9 +76,21 @@ suite('Client Integration', () => {
     await condition(() => hostBuffer.text === 'goodbye cruel world')
     await condition(() => guestBuffer.text === 'goodbye cruel world')
 
-    hostSharedEditor.setSelectionRanges([{start: {row: 0, column: 6}, end: {row: 0, column: 11}}])
+    hostSharedEditor.setSelectionRanges({
+      1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    })
+    guestSharedEditor.setSelectionRanges({
+      1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
+      2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
+    })
     await condition(() => {
-      return deepEqual(guestEditor.selectionRanges, hostSharedEditor.selectionRanges)
+      return (
+        deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}) &&
+        deepEqual(hostSharedEditor.selectionMarkerLayersBySiteId[2], {
+          1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
+          2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
+        })
+      )
     })
   })
 })

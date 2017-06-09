@@ -1,6 +1,10 @@
 module.exports =
 class Editor {
-  setSelectionRanges (selectionRanges) {
-    this.selectionRanges = selectionRanges
+  constructor () {
+    this.selectionMarkerLayersBySiteId = {}
+  }
+
+  setSelectionMarkerLayerForSiteId (siteId, selectionMarkerLayer) {
+    this.selectionMarkerLayersBySiteId[siteId] = selectionMarkerLayer
   }
 }
