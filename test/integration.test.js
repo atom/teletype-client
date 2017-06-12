@@ -32,7 +32,7 @@ suite('Client Integration', () => {
     return server.reset()
   })
 
-  test('sharing an editor from a host and fetching its initial state from a guest', async () => {
+  test('sharing an editor from a host performing basic collaboration with a guest', async () => {
     const host = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
