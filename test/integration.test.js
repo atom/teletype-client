@@ -37,9 +37,12 @@ suite('Client Integration', () => {
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
-    const hostBuffer = new Buffer('hello world')
+    let hostSetTextCallCount = 0
+    const hostBuffer = new Buffer('hello world', {didSetText: () => hostSetTextCallCount++})
     const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', text: hostBuffer.text})
     hostSharedBuffer.setDelegate(hostBuffer)
+    assert.equal(hostSetTextCallCount, 0)
+
     const hostSharedEditor = await host.createSharedEditor({
       sharedBuffer: hostSharedBuffer,
       selectionRanges: {
@@ -50,6 +53,7 @@ suite('Client Integration', () => {
 
     const hostEditor = new Editor()
     hostSharedEditor.setDelegate(hostEditor)
+    assert(!hostEditor.selectionMarkerLayersBySiteId[1])
 
     const guest = new Client({
       restGateway: server.restGateway,

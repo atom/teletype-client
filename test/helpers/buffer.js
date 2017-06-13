@@ -2,9 +2,10 @@ const assert = require('assert')
 
 module.exports =
 class Buffer {
-  constructor (text) {
+  constructor (text, {didSetText} = {}) {
     this.text = text
     this.textEqualityResolvers = new Map()
+    this.didSetText = didSetText
   }
 
   getText () {
@@ -13,6 +14,7 @@ class Buffer {
 
   setText (text) {
     this.text = text
+    if (this.didSetText) this.didSetText(text)
   }
 
   applyMany (operations) {
