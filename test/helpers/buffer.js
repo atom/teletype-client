@@ -11,21 +11,6 @@ class Buffer {
     return this.text
   }
 
-  whenTextEquals (text) {
-    if (text === this.text) {
-      return Promise.resolve()
-    } else {
-      return new Promise((resolve) => {
-        let resolvers = this.textEqualityResolvers.get(text)
-        if (!resolvers) {
-          resolvers = []
-          this.textEqualityResolvers.set(text, resolvers)
-        }
-        resolvers.push(resolve)
-      })
-    }
-  }
-
   setText (text) {
     this.text = text
   }
