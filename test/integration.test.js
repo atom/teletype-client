@@ -90,7 +90,7 @@ suite('Client Integration', () => {
     await condition(() => {
       return (
         deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}) &&
-        deepEqual(hostSharedEditor.selectionMarkerLayersBySiteId[2], {
+        deepEqual(hostEditor.selectionMarkerLayersBySiteId[2], {
           1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
           2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
         })
