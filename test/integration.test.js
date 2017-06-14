@@ -32,42 +32,47 @@ suite('Client Integration', () => {
     return server.reset()
   })
 
-  test('sharing an editor from a host performing basic collaboration with a guest', async () => {
+  test('sharing a portal and performing basic collaboration with a guest', async () => {
     const host = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
+    const hostPortal = await host.createPortal()
+
     let hostSetTextCallCount = 0
     const hostBuffer = new Buffer('hello world', {didSetText: () => hostSetTextCallCount++})
-    const hostSharedBuffer = await host.createSharedBuffer({uri: 'uri-1', text: hostBuffer.text})
+    const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'uri-1', text: hostBuffer.text})
     hostSharedBuffer.setDelegate(hostBuffer)
     assert.equal(hostSetTextCallCount, 0)
 
-    const hostSharedEditor = await host.createSharedEditor({
+    const hostSharedEditor = await hostPortal.createSharedEditor({
       sharedBuffer: hostSharedBuffer,
       selectionRanges: {
         1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
         2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
       }
     })
-
     const hostEditor = new Editor()
     hostSharedEditor.setDelegate(hostEditor)
     assert(!hostEditor.selectionMarkerLayersBySiteId[1])
+
+    await hostPortal.setActiveSharedEditor(hostSharedEditor)
 
     const guest = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
     })
-    const guestBuffer = new Buffer()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+
     const guestEditor = new Editor()
-    const guestSharedEditor = await guest.joinSharedEditor(hostSharedEditor.id)
+    const guestSharedEditor = guestPortal.getActiveSharedEditor()
     guestSharedEditor.setDelegate(guestEditor)
     assert.deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {
       1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
       2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
     })
 
+    const guestBuffer = new Buffer()
     const guestSharedBuffer = guestSharedEditor.sharedBuffer
     guestSharedBuffer.setDelegate(guestBuffer)
     assert.equal(guestSharedBuffer.uri, 'uri-1')
