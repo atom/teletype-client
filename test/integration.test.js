@@ -3,6 +3,7 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
+const Workspace = require('./helpers/workspace')
 const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom-team/real-time-server')
@@ -33,10 +34,9 @@ suite('Client Integration', () => {
   })
 
   test('sharing a portal and performing basic collaboration with a guest', async () => {
-    const host = new Client({
-      restGateway: server.restGateway,
-      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
-    })
+    const host = buildClient()
+    const guest = buildClient()
+
     const hostPortal = await host.createPortal()
 
     let hostSetTextCallCount = 0
@@ -58,14 +58,12 @@ suite('Client Integration', () => {
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
 
-    const guest = new Client({
-      restGateway: server.restGateway,
-      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
-    })
+    const guestWorkspace = new Workspace()
     const guestPortal = await guest.joinPortal(hostPortal.id)
+    guestPortal.setDelegate(guestWorkspace)
 
     const guestEditor = new Editor()
-    const guestSharedEditor = guestPortal.getActiveSharedEditor()
+    const guestSharedEditor = guestWorkspace.getActiveSharedEditor()
     guestSharedEditor.setDelegate(guestEditor)
     assert.deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {
       1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
@@ -102,6 +100,42 @@ suite('Client Integration', () => {
       )
     })
   })
+
+  test('switching a portal\'s active editor', async () => {
+    const host = buildClient()
+    const guest = buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostSharedBuffer1 = await hostPortal.createSharedBuffer({uri: 'buffer-a', text: ''})
+    const hostSharedEditor1 = await hostPortal.createSharedEditor({
+      sharedBuffer: hostSharedBuffer1,
+      selectionRanges: {}
+    })
+    await hostPortal.setActiveSharedEditor(hostSharedEditor1)
+
+    const guestWorkspace = new Workspace()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    guestPortal.setDelegate(guestWorkspace)
+    assert.equal(guestWorkspace.getActiveBufferURI(), 'buffer-a')
+
+    const hostSharedBuffer2 = await hostPortal.createSharedBuffer({uri: 'buffer-b', text: ''})
+    const hostSharedEditor2 = await hostPortal.createSharedEditor({
+      sharedBuffer: hostSharedBuffer2,
+      selectionRanges: {}
+    })
+    await hostPortal.setActiveSharedEditor(hostSharedEditor2)
+    await condition(() => guestWorkspace.getActiveBufferURI() === 'buffer-b')
+
+    await hostPortal.setActiveSharedEditor(hostSharedEditor1)
+    await condition(() => guestWorkspace.getActiveBufferURI() === 'buffer-a')
+  })
+
+  function buildClient () {
+    return new Client({
+      restGateway: server.restGateway,
+      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
+    })
+  }
 })
 
 function condition (fn) {
