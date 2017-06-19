@@ -130,6 +130,33 @@ suite('Client Integration', () => {
     await condition(() => guestWorkspace.getActiveBufferURI() === 'buffer-a')
   })
 
+  test('closing a portal\'s active editor', async () => {
+    const host = buildClient()
+    const guest = buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
+    const hostSharedEditor = await hostPortal.createSharedEditor({
+      sharedBuffer: hostSharedBuffer,
+      selectionRanges: {}
+    })
+
+    const guestWorkspace = new Workspace()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    guestPortal.setDelegate(guestWorkspace)
+
+    await hostPortal.setActiveSharedEditor(hostSharedEditor)
+    await condition(() => guestWorkspace.getActiveSharedEditor() != null)
+    assert.equal(guestWorkspace.getActiveBufferURI(), 'some-buffer')
+
+    await hostPortal.setActiveSharedEditor(null)
+    await condition(() => guestWorkspace.getActiveSharedEditor() == null)
+
+    await hostPortal.setActiveSharedEditor(hostSharedEditor)
+    await condition(() => guestWorkspace.getActiveSharedEditor() != null)
+    assert.equal(guestWorkspace.getActiveBufferURI(), 'some-buffer')
+  })
+
   function buildClient () {
     return new Client({
       restGateway: server.restGateway,
