@@ -221,6 +221,7 @@ suite('Client Integration', () => {
     assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
     await condition(() => guest2PortalDelegate.hasHostDisconnected())
+    assert(!guest2Editor.selectionMarkerLayersBySiteId[hostPortal.siteId])
   })
 
   function buildClient ({heartbeatIntervalInMilliseconds}={}) {
