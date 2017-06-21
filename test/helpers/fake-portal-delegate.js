@@ -1,5 +1,5 @@
 module.exports =
-class Workspace {
+class FakePortalDelegate {
   constructor () {
     this.hostDisconnected = false
   }

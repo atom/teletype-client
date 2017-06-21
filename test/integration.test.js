@@ -3,7 +3,7 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
-const Workspace = require('./helpers/workspace')
+const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom-team/real-time-server')
@@ -58,12 +58,12 @@ suite('Client Integration', () => {
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
 
-    const guestWorkspace = new Workspace()
+    const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestWorkspace)
+    guestPortal.setDelegate(guestPortalDelegate)
 
     const guestEditor = new Editor()
-    const guestSharedEditor = guestWorkspace.getActiveSharedEditor()
+    const guestSharedEditor = guestPortalDelegate.getActiveSharedEditor()
     guestSharedEditor.setDelegate(guestEditor)
     assert.deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {
       1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
@@ -113,10 +113,10 @@ suite('Client Integration', () => {
     })
     await hostPortal.setActiveSharedEditor(hostSharedEditor1)
 
-    const guestWorkspace = new Workspace()
+    const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestWorkspace)
-    assert.equal(guestWorkspace.getActiveBufferURI(), 'buffer-a')
+    guestPortal.setDelegate(guestPortalDelegate)
+    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'buffer-a')
 
     const hostSharedBuffer2 = await hostPortal.createSharedBuffer({uri: 'buffer-b', text: ''})
     const hostSharedEditor2 = await hostPortal.createSharedEditor({
@@ -124,10 +124,10 @@ suite('Client Integration', () => {
       selectionRanges: {}
     })
     await hostPortal.setActiveSharedEditor(hostSharedEditor2)
-    await condition(() => guestWorkspace.getActiveBufferURI() === 'buffer-b')
+    await condition(() => guestPortalDelegate.getActiveBufferURI() === 'buffer-b')
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor1)
-    await condition(() => guestWorkspace.getActiveBufferURI() === 'buffer-a')
+    await condition(() => guestPortalDelegate.getActiveBufferURI() === 'buffer-a')
   })
 
   test('closing a portal\'s active editor', async () => {
@@ -141,20 +141,20 @@ suite('Client Integration', () => {
       selectionRanges: {}
     })
 
-    const guestWorkspace = new Workspace()
+    const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestWorkspace)
+    guestPortal.setDelegate(guestPortalDelegate)
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guestWorkspace.getActiveSharedEditor() != null)
-    assert.equal(guestWorkspace.getActiveBufferURI(), 'some-buffer')
+    await condition(() => guestPortalDelegate.getActiveSharedEditor() != null)
+    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
 
     await hostPortal.setActiveSharedEditor(null)
-    await condition(() => guestWorkspace.getActiveSharedEditor() == null)
+    await condition(() => guestPortalDelegate.getActiveSharedEditor() == null)
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guestWorkspace.getActiveSharedEditor() != null)
-    assert.equal(guestWorkspace.getActiveBufferURI(), 'some-buffer')
+    await condition(() => guestPortalDelegate.getActiveSharedEditor() != null)
+    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
   })
 
   test('heartbeat', async function() {
@@ -166,14 +166,14 @@ suite('Client Integration', () => {
     const hostPortal = await host.createPortal()
 
     const guest1 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const guest1Workspace = new Workspace() // TODO Refactor: Rename Workspace to FakePortalDelegate
+    const guest1PortalDelegate = new FakePortalDelegate()
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
-    guest1Portal.setDelegate(guest1Workspace)
+    guest1Portal.setDelegate(guest1PortalDelegate)
 
     const guest2 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const guest2Workspace = new Workspace()
+    const guest2PortalDelegate = new FakePortalDelegate()
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
-    guest2Portal.setDelegate(guest2Workspace)
+    guest2Portal.setDelegate(guest2PortalDelegate)
 
     const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
     const hostEditor = new Editor()
@@ -183,14 +183,14 @@ suite('Client Integration', () => {
     })
     hostSharedEditor.setDelegate(hostEditor)
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guest1Workspace.getActiveSharedEditor() != null && guest2Workspace.getActiveSharedEditor() != null)
+    await condition(() => guest1PortalDelegate.getActiveSharedEditor() != null && guest2PortalDelegate.getActiveSharedEditor() != null)
 
-    const guest1SharedEditor = guest1Workspace.getActiveSharedEditor()
+    const guest1SharedEditor = guest1PortalDelegate.getActiveSharedEditor()
     const guest1Editor = new Editor()
     guest1SharedEditor.setDelegate(guest1Editor)
     guest1SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
-    const guest2SharedEditor = guest2Workspace.getActiveSharedEditor()
+    const guest2SharedEditor = guest2PortalDelegate.getActiveSharedEditor()
     const guest2Editor = new Editor()
     guest2SharedEditor.setDelegate(guest2Editor)
     guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
@@ -213,9 +213,9 @@ suite('Client Integration', () => {
     hostPortal.dispose()
     await condition(() => hostPortal.heartbeat.isStopped())
     await timeout(EVICTION_PERIOD_IN_MS)
-    assert(!guest2Workspace.hasHostDisconnected())
+    assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
-    await condition(() => guest2Workspace.hasHostDisconnected())
+    await condition(() => guest2PortalDelegate.hasHostDisconnected())
   })
 
   function buildClient ({heartbeatIntervalInMilliseconds}={}) {
