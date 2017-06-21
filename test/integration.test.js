@@ -9,7 +9,7 @@ const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom-team/real-time-server')
 
 suite('Client Integration', () => {
-  let server
+  let server, portals
 
   suiteSetup(async () => {
     const params = {
@@ -30,7 +30,14 @@ suite('Client Integration', () => {
   })
 
   setup(() => {
+    portals = []
     return server.reset()
+  })
+
+  teardown(async () => {
+    for (const portal of portals) {
+      await portal.dispose()
+    }
   })
 
   test('sharing a portal and performing basic collaboration with a guest', async () => {
@@ -200,8 +207,7 @@ suite('Client Integration', () => {
       hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId] != null
     )
 
-    guest1Portal.dispose()
-    await condition(() => guest1Portal.heartbeat.isStopped())
+    await guest1Portal.dispose()
     await timeout(EVICTION_PERIOD_IN_MS)
     server.heartbeatService.evictDeadSites()
     await condition(() =>
@@ -210,8 +216,7 @@ suite('Client Integration', () => {
     )
     assert(hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId])
 
-    hostPortal.dispose()
-    await condition(() => hostPortal.heartbeat.isStopped())
+    await hostPortal.dispose()
     await timeout(EVICTION_PERIOD_IN_MS)
     assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
@@ -222,7 +227,8 @@ suite('Client Integration', () => {
     return new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
-      heartbeatIntervalInMilliseconds
+      heartbeatIntervalInMilliseconds,
+      didCreateOrJoinPortal: (portal) => portals.push(portal)
     })
   }
 })
