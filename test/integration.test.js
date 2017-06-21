@@ -207,7 +207,7 @@ suite('Client Integration', () => {
       hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId] != null
     )
 
-    await guest1Portal.dispose()
+    await guest1Portal.simulateNetworkFailure()
     await timeout(EVICTION_PERIOD_IN_MS)
     server.heartbeatService.evictDeadSites()
     await condition(() =>
@@ -216,7 +216,7 @@ suite('Client Integration', () => {
     )
     assert(hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId])
 
-    await hostPortal.dispose()
+    await hostPortal.simulateNetworkFailure()
     await timeout(EVICTION_PERIOD_IN_MS)
     assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
