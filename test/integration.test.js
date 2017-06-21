@@ -157,10 +157,72 @@ suite('Client Integration', () => {
     assert.equal(guestWorkspace.getActiveBufferURI(), 'some-buffer')
   })
 
-  function buildClient () {
+  test('heartbeat', async function() {
+    const HEARTBEAT_INTERVAL_IN_MS = 10
+    const EVICTION_PERIOD_IN_MS = 2 * HEARTBEAT_INTERVAL_IN_MS
+    server.heartbeatService.setEvictionPeriod(EVICTION_PERIOD_IN_MS)
+
+    const host = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+    const hostPortal = await host.createPortal()
+
+    const guest1 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+    const guest1Workspace = new Workspace() // TODO Refactor: Rename Workspace to FakePortalDelegate
+    const guest1Portal = await guest1.joinPortal(hostPortal.id)
+    guest1Portal.setDelegate(guest1Workspace)
+
+    const guest2 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+    const guest2Workspace = new Workspace()
+    const guest2Portal = await guest2.joinPortal(hostPortal.id)
+    guest2Portal.setDelegate(guest2Workspace)
+
+    const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
+    const hostEditor = new Editor()
+    const hostSharedEditor = await hostPortal.createSharedEditor({
+      sharedBuffer: hostSharedBuffer,
+      selectionRanges: {}
+    })
+    hostSharedEditor.setDelegate(hostEditor)
+    await hostPortal.setActiveSharedEditor(hostSharedEditor)
+    await condition(() => guest1Workspace.getActiveSharedEditor() != null && guest2Workspace.getActiveSharedEditor() != null)
+
+    const guest1SharedEditor = guest1Workspace.getActiveSharedEditor()
+    const guest1Editor = new Editor()
+    guest1SharedEditor.setDelegate(guest1Editor)
+    guest1SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
+    const guest2SharedEditor = guest2Workspace.getActiveSharedEditor()
+    const guest2Editor = new Editor()
+    guest2SharedEditor.setDelegate(guest2Editor)
+    guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
+    await condition(() =>
+      hostEditor.selectionMarkerLayersBySiteId[guest1Portal.siteId] != null &&
+      hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId] != null
+    )
+
+    guest1Portal.dispose()
+    await condition(() => guest1Portal.heartbeat.isStopped())
+    await timeout(EVICTION_PERIOD_IN_MS)
+    server.heartbeatService.evictDeadSites()
+    await condition(() =>
+      hostEditor.selectionMarkerLayersBySiteId[guest1Portal.siteId] == null &&
+      guest2Editor.selectionMarkerLayersBySiteId[guest1Portal.siteId] == null
+    )
+    assert(hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId])
+
+    hostPortal.dispose()
+    await condition(() => hostPortal.heartbeat.isStopped())
+    await timeout(EVICTION_PERIOD_IN_MS)
+    assert(!guest2Workspace.hasHostDisconnected())
+    server.heartbeatService.evictDeadSites()
+    await condition(() => guest2Workspace.hasHostDisconnected())
+  })
+
+  function buildClient ({heartbeatIntervalInMilliseconds}={}) {
     return new Client({
       restGateway: server.restGateway,
-      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials)
+      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
+      heartbeatIntervalInMilliseconds
     })
   }
 })
@@ -169,4 +231,8 @@ function condition (fn) {
   return new Promise((resolve) => {
     setInterval(() => { if (fn()) resolve() }, 5)
   })
+}
+
+function timeout (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
