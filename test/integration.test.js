@@ -9,7 +9,7 @@ const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom-team/real-time-server')
 
 suite('Client Integration', () => {
-  let server, portals
+  let server, portals, conditionErrorMessage
 
   suiteSetup(async () => {
     const params = {
@@ -30,11 +30,16 @@ suite('Client Integration', () => {
   })
 
   setup(() => {
+    conditionErrorMessage = null
     portals = []
     return server.reset()
   })
 
   teardown(async () => {
+    if (conditionErrorMessage) {
+      console.error('Condition failed with error message: ', conditionErrorMessage)
+    }
+
     for (const portal of portals) {
       await portal.dispose()
     }
@@ -206,7 +211,10 @@ suite('Client Integration', () => {
     )
 
     await guest1Portal.simulateNetworkFailure()
-    await timeout(EVICTION_PERIOD_IN_MS)
+    await condition(async () => deepEqual(
+      await server.heartbeatService.findDeadSites(),
+      [{portalId: guest1Portal.id, id: guest1Portal.siteId}]
+    ), 'Expected to find one dead site: Guest 1')
     server.heartbeatService.evictDeadSites()
     await condition(() =>
       hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
@@ -215,7 +223,10 @@ suite('Client Integration', () => {
     assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
 
     await hostPortal.simulateNetworkFailure()
-    await timeout(EVICTION_PERIOD_IN_MS)
+    await condition(async () => deepEqual(
+      await server.heartbeatService.findDeadSites(),
+      [{portalId: hostPortal.id, id: hostPortal.siteId}]
+    ), 'Expected to find one dead site: Host')
     assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
     await condition(() => guest2PortalDelegate.hasHostDisconnected())
@@ -230,13 +241,27 @@ suite('Client Integration', () => {
       didCreateOrJoinPortal: (portal) => portals.push(portal)
     })
   }
-})
 
-function condition (fn) {
-  return new Promise((resolve) => {
-    setInterval(() => { if (fn()) resolve() }, 5)
-  })
-}
+  function condition (fn, message) {
+    assert(!conditionErrorMessage, 'Cannot await on multiple conditions at the same time')
+
+    conditionErrorMessage = message
+    return new Promise((resolve) => {
+      async function callback () {
+        const resultOrPromise = fn()
+        const result = (resultOrPromise instanceof Promise) ? (await resultOrPromise) : resultOrPromise
+        if (result) {
+          conditionErrorMessage = null
+          resolve()
+        } else {
+          setTimeout(callback, 5)
+        }
+      }
+
+      callback()
+    })
+  }
+})
 
 function timeout (ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
