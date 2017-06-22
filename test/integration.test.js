@@ -61,8 +61,7 @@ suite('Client Integration', () => {
     })
     const hostEditor = new Editor()
     hostSharedEditor.setDelegate(hostEditor)
-    assert(!hostEditor.selectionMarkerLayersBySiteId[1])
-
+    assert(!hostEditor.markerLayerForSiteId(1))
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
 
     const guestPortalDelegate = new FakePortalDelegate()
@@ -72,7 +71,7 @@ suite('Client Integration', () => {
     const guestEditor = new Editor()
     const guestSharedEditor = guestPortalDelegate.getActiveSharedEditor()
     guestSharedEditor.setDelegate(guestEditor)
-    assert.deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {
+    assert.deepEqual(guestEditor.markerLayerForSiteId(1), {
       1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
       2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
     })
@@ -99,9 +98,8 @@ suite('Client Integration', () => {
     })
     await condition(() => {
       return (
-        deepEqual(guestEditor.selectionMarkerLayersBySiteId[1], {1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}) &&
-        deepEqual(hostEditor.selectionMarkerLayersBySiteId[2], {
-          1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
+        deepEqual(guestEditor.markerLayerForSiteId(1), {1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}) &&
+        deepEqual(hostEditor.markerLayerForSiteId(2), {1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
           2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
         })
       )
@@ -203,25 +201,25 @@ suite('Client Integration', () => {
     guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
     await condition(() =>
-      hostEditor.selectionMarkerLayersBySiteId[guest1Portal.siteId] != null &&
-      hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId] != null
+      hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
+      hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null
     )
 
     await guest1Portal.simulateNetworkFailure()
     await timeout(EVICTION_PERIOD_IN_MS)
     server.heartbeatService.evictDeadSites()
     await condition(() =>
-      hostEditor.selectionMarkerLayersBySiteId[guest1Portal.siteId] == null &&
-      guest2Editor.selectionMarkerLayersBySiteId[guest1Portal.siteId] == null
+      hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+      guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null
     )
-    assert(hostEditor.selectionMarkerLayersBySiteId[guest2Portal.siteId])
+    assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
 
     await hostPortal.simulateNetworkFailure()
     await timeout(EVICTION_PERIOD_IN_MS)
     assert(!guest2PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
     await condition(() => guest2PortalDelegate.hasHostDisconnected())
-    assert(!guest2Editor.selectionMarkerLayersBySiteId[hostPortal.siteId])
+    assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
   })
 
   function buildClient ({heartbeatIntervalInMilliseconds}={}) {
