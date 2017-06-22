@@ -13,7 +13,7 @@
     "pusher-js": "^4.1.0"
   },
   "devDependencies": {
-    "@atom-team/real-time-server": "^0.7.0",
+    "@atom-team/real-time-server": "^0.8.0",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "mocha": "^3.4.2"
