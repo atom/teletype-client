@@ -185,6 +185,11 @@ suite('Client Integration', () => {
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
     guest2Portal.setDelegate(guest2PortalDelegate)
 
+    const guest3 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+    const guest3PortalDelegate = new FakePortalDelegate()
+    const guest3Portal = await guest3.joinPortal(hostPortal.id)
+    guest3Portal.setDelegate(guest3PortalDelegate)
+
     const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
     const hostEditor = new Editor()
     const hostSharedEditor = await hostPortal.createSharedEditor({
@@ -193,7 +198,11 @@ suite('Client Integration', () => {
     })
     hostSharedEditor.setDelegate(hostEditor)
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guest1PortalDelegate.getActiveSharedEditor() != null && guest2PortalDelegate.getActiveSharedEditor() != null)
+    await condition(() =>
+      guest1PortalDelegate.getActiveSharedEditor() != null &&
+      guest2PortalDelegate.getActiveSharedEditor() != null &&
+      guest3PortalDelegate.getActiveSharedEditor() != null
+    )
 
     const guest1SharedEditor = guest1PortalDelegate.getActiveSharedEditor()
     const guest1Editor = new Editor()
@@ -205,9 +214,15 @@ suite('Client Integration', () => {
     guest2SharedEditor.setDelegate(guest2Editor)
     guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
+    const guest3SharedEditor = guest3PortalDelegate.getActiveSharedEditor()
+    const guest3Editor = new Editor()
+    guest3SharedEditor.setDelegate(guest3Editor)
+    guest3SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
     await condition(() =>
       hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
-      hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null
+      hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null &&
+      hostEditor.markerLayerForSiteId(guest3Portal.siteId) != null
     )
 
     await guest1Portal.simulateNetworkFailure()
@@ -218,19 +233,24 @@ suite('Client Integration', () => {
     server.heartbeatService.evictDeadSites()
     await condition(() =>
       hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-      guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+      guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+      guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
     )
     assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
+    assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
 
     await hostPortal.simulateNetworkFailure()
     await condition(async () => deepEqual(
       await server.heartbeatService.findDeadSites(),
       [{portalId: hostPortal.id, id: hostPortal.siteId}]
     ), 'Expected to find one dead site: Host')
-    assert(!guest2PortalDelegate.hasHostDisconnected())
+    assert(!guest2PortalDelegate.hasHostDisconnected() && !guest3PortalDelegate.hasHostDisconnected())
     server.heartbeatService.evictDeadSites()
-    await condition(() => guest2PortalDelegate.hasHostDisconnected())
+    await condition(() => guest2PortalDelegate.hasHostDisconnected() && guest3PortalDelegate.hasHostDisconnected())
     assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
+    assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+    assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
+    assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
   })
 
   function buildClient ({heartbeatIntervalInMilliseconds}={}) {
