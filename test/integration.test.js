@@ -6,7 +6,7 @@ const Editor = require('./helpers/editor')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
-const {startTestServer} = require('@atom-team/real-time-server')
+const {startTestServer} = require('@atom/real-time-server')
 
 suite('Client Integration', () => {
   let server, portals, conditionErrorMessage
