@@ -167,90 +167,112 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
   })
 
-  test('heartbeat', async function() {
+  suite('heartbeat', () => {
     const HEARTBEAT_INTERVAL_IN_MS = 10
     const EVICTION_PERIOD_IN_MS = 2 * HEARTBEAT_INTERVAL_IN_MS
-    server.heartbeatService.setEvictionPeriod(EVICTION_PERIOD_IN_MS)
 
-    const host = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const hostPortal = await host.createPortal()
+    let hostPortal, hostEditor
+    let guest1Portal, guest1PortalDelegate, guest1Editor
+    let guest2Portal, guest2PortalDelegate, guest2Editor
+    let guest3Portal, guest3PortalDelegate, guest3Editor
 
-    const guest1 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const guest1PortalDelegate = new FakePortalDelegate()
-    const guest1Portal = await guest1.joinPortal(hostPortal.id)
-    guest1Portal.setDelegate(guest1PortalDelegate)
-
-    const guest2 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const guest2PortalDelegate = new FakePortalDelegate()
-    const guest2Portal = await guest2.joinPortal(hostPortal.id)
-    guest2Portal.setDelegate(guest2PortalDelegate)
-
-    const guest3 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
-    const guest3PortalDelegate = new FakePortalDelegate()
-    const guest3Portal = await guest3.joinPortal(hostPortal.id)
-    guest3Portal.setDelegate(guest3PortalDelegate)
-
-    const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
-    const hostEditor = new Editor()
-    const hostSharedEditor = await hostPortal.createSharedEditor({
-      sharedBuffer: hostSharedBuffer,
-      selectionRanges: {}
+    suiteSetup(() => {
+      server.heartbeatService.setEvictionPeriod(EVICTION_PERIOD_IN_MS)
     })
-    hostSharedEditor.setDelegate(hostEditor)
-    await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() =>
-      guest1PortalDelegate.getActiveSharedEditor() != null &&
-      guest2PortalDelegate.getActiveSharedEditor() != null &&
-      guest3PortalDelegate.getActiveSharedEditor() != null
-    )
 
-    const guest1SharedEditor = guest1PortalDelegate.getActiveSharedEditor()
-    const guest1Editor = new Editor()
-    guest1SharedEditor.setDelegate(guest1Editor)
-    guest1SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+    setup(async () => {
+      const host = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      hostPortal = await host.createPortal()
 
-    const guest2SharedEditor = guest2PortalDelegate.getActiveSharedEditor()
-    const guest2Editor = new Editor()
-    guest2SharedEditor.setDelegate(guest2Editor)
-    guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      const guest1 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      guest1PortalDelegate = new FakePortalDelegate()
+      guest1Portal = await guest1.joinPortal(hostPortal.id)
+      guest1Portal.setDelegate(guest1PortalDelegate)
 
-    const guest3SharedEditor = guest3PortalDelegate.getActiveSharedEditor()
-    const guest3Editor = new Editor()
-    guest3SharedEditor.setDelegate(guest3Editor)
-    guest3SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      const guest2 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      guest2PortalDelegate = new FakePortalDelegate()
+      guest2Portal = await guest2.joinPortal(hostPortal.id)
+      guest2Portal.setDelegate(guest2PortalDelegate)
 
-    await condition(() =>
-      hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
-      hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null &&
-      hostEditor.markerLayerForSiteId(guest3Portal.siteId) != null
-    )
+      const guest3 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      guest3PortalDelegate = new FakePortalDelegate()
+      guest3Portal = await guest3.joinPortal(hostPortal.id)
+      guest3Portal.setDelegate(guest3PortalDelegate)
 
-    await guest1Portal.simulateNetworkFailure()
-    await condition(async () => deepEqual(
-      await server.heartbeatService.findDeadSites(),
-      [{portalId: guest1Portal.id, id: guest1Portal.siteId}]
-    ), 'Expected to find one dead site: Guest 1')
-    server.heartbeatService.evictDeadSites()
-    await condition(() =>
-      hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-      guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-      guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
-    )
-    assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
-    assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+      const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
+      hostEditor = new Editor()
+      const hostSharedEditor = await hostPortal.createSharedEditor({
+        sharedBuffer: hostSharedBuffer,
+        selectionRanges: {}
+      })
+      hostSharedEditor.setDelegate(hostEditor)
+      await hostPortal.setActiveSharedEditor(hostSharedEditor)
+      await condition(() =>
+        guest1PortalDelegate.getActiveSharedEditor() != null &&
+        guest2PortalDelegate.getActiveSharedEditor() != null &&
+        guest3PortalDelegate.getActiveSharedEditor() != null
+      )
 
-    await hostPortal.simulateNetworkFailure()
-    await condition(async () => deepEqual(
-      await server.heartbeatService.findDeadSites(),
-      [{portalId: hostPortal.id, id: hostPortal.siteId}]
-    ), 'Expected to find one dead site: Host')
-    assert(!guest2PortalDelegate.hasHostDisconnected() && !guest3PortalDelegate.hasHostDisconnected())
-    server.heartbeatService.evictDeadSites()
-    await condition(() => guest2PortalDelegate.hasHostDisconnected() && guest3PortalDelegate.hasHostDisconnected())
-    assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
-    assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
-    assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
-    assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+      const guest1SharedEditor = guest1PortalDelegate.getActiveSharedEditor()
+      guest1Editor = new Editor()
+      guest1SharedEditor.setDelegate(guest1Editor)
+      guest1SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
+      const guest2SharedEditor = guest2PortalDelegate.getActiveSharedEditor()
+      guest2Editor = new Editor()
+      guest2SharedEditor.setDelegate(guest2Editor)
+      guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
+      const guest3SharedEditor = guest3PortalDelegate.getActiveSharedEditor()
+      guest3Editor = new Editor()
+      guest3SharedEditor.setDelegate(guest3Editor)
+      guest3SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+
+      await condition(() =>
+        hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
+        hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null &&
+        hostEditor.markerLayerForSiteId(guest3Portal.siteId) != null
+      )
+    })
+
+    test('guest disconnection', async () => {
+      await guest1Portal.simulateNetworkFailure()
+      await condition(async () => deepEqual(
+        await server.heartbeatService.findDeadSites(),
+        [{portalId: guest1Portal.id, id: guest1Portal.siteId}]
+      ), 'Expected to find one dead site: Guest 1')
+      server.heartbeatService.evictDeadSites()
+      await condition(() =>
+        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+      )
+      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+    })
+
+    test('host disconnection', async () => {
+      await hostPortal.simulateNetworkFailure()
+      await condition(async () => deepEqual(
+        await server.heartbeatService.findDeadSites(),
+        [{portalId: hostPortal.id, id: hostPortal.siteId}]
+      ), 'Expected to find one dead site: Host')
+      assert(!guest1PortalDelegate.hasHostDisconnected() && !guest2PortalDelegate.hasHostDisconnected() && !guest3PortalDelegate.hasHostDisconnected())
+      server.heartbeatService.evictDeadSites()
+      await condition(() => guest1PortalDelegate.hasHostDisconnected() && guest2PortalDelegate.hasHostDisconnected() && guest3PortalDelegate.hasHostDisconnected())
+
+      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
+
+      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
+      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+
+      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
+      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+    })
   })
 
   function buildClient ({heartbeatIntervalInMilliseconds}={}) {
