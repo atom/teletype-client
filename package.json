@@ -9,7 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom/tachyon": "atom/tachyon#v0.3.2",
+    "@atom/tachyon": "git+https://x-auth:924792417376b236ca11cc234bcc95d306dcd1cb@github.com/atom/tachyon#v0.3.2",
     "pusher-js": "^4.1.0"
   },
   "devDependencies": {
