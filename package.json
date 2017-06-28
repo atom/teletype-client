@@ -9,11 +9,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom/tachyon": "git+https://x-auth:924792417376b236ca11cc234bcc95d306dcd1cb@github.com/atom/tachyon#v0.3.2",
+    "@atom/tachyon": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/tachyon/tarball/v0.3.2",
     "pusher-js": "^4.1.0"
   },
   "devDependencies": {
-    "@atom/real-time-server": "atom/real-time-server#v0.8.1",
+    "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/v0.8.1",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "mocha": "^3.4.2"
