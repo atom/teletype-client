@@ -27,7 +27,7 @@ suite('TaskQueue', () => {
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-2')
-        return task1Promise
+        return task2Promise
       }
     })
     assert.deepEqual(executedTasks, ['task-1'])
@@ -197,7 +197,6 @@ suite('TaskQueue', () => {
     })
 
     queue.cancelPending('task-2')
-
     resolveTask1Promise()
     await task1Promise
     assert.deepEqual(executedTasks, ['task-1', 'task-3'])
@@ -209,5 +208,48 @@ suite('TaskQueue', () => {
     resolveTask3Promise()
     await task3Promise
     assert.deepEqual(executedTasks, ['task-1', 'task-3'])
+  })
+
+  test('dispose', async () => {
+    const queue = new TaskQueue()
+    const executedTasks = []
+
+    let resolveTask1Promise
+    const task1Promise = new Promise((resolve) => resolveTask1Promise = resolve)
+    queue.push({
+      id: 'task-1',
+      data: 'a',
+      coalesce: (d) => d,
+      execute: (d) => {
+        executedTasks.push('task-1')
+        return task1Promise
+      }
+    })
+    assert.deepEqual(executedTasks, ['task-1'])
+
+    let resolveTask2Promise
+    const task2Promise = new Promise((resolve) => resolveTask2Promise = resolve)
+    queue.push({
+      id: 'task-2',
+      data: 'b',
+      coalesce: (d) => d,
+      execute: (d) => {
+        executedTasks.push('task-2')
+        return task2Promise
+      }
+    })
+    assert.deepEqual(executedTasks, ['task-1'])
+
+    queue.dispose()
+    resolveTask1Promise()
+    await task1Promise
+    assert.deepEqual(executedTasks, ['task-1'])
+
+    resolveTask2Promise()
+    await task2Promise
+    assert.deepEqual(executedTasks, ['task-1'])
+
+    assert.throws(() => queue.push({id: 'task-3', data: 'c', coalesce: (d) => d, execute: (d) => {}}))
+    assert.throws(() => queue.cancelPending('task-1'))
   })
 })
