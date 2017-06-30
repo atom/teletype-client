@@ -1,2 +1,7 @@
 language: node_js
 node_js: 'node'
+services:
+  - postgresql
+before_script:
+  - 'createdb real-time-server-test'
+  - 'cp .env.example .env'
