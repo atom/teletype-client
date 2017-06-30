@@ -1,5 +1,9 @@
 language: node_js
 node_js: 'node'
+notifications:
+  email:
+    on_success: never
+    on_failure: change
 services:
   - postgresql
 before_script:
