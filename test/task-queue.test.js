@@ -180,7 +180,7 @@ suite('TaskQueue', () => {
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-2')
-        return task1Promise
+        return task2Promise
       }
     })
 
