@@ -11,3 +11,5 @@ services:
 before_script:
   - 'createdb real-time-server-test'
   - 'cp .env.example .env'
+git:
+  depth: 10
