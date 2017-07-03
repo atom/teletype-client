@@ -1,4 +1,5 @@
 const assert = require('assert')
+const deepEqual = require('deep-equal')
 const TaskQueue = require('../lib/task-queue')
 
 suite('TaskQueue', () => {
@@ -7,72 +8,64 @@ suite('TaskQueue', () => {
     const executedTasks = []
 
     let resolveTask1Promise
-    const task1Promise = new Promise((resolve) => resolveTask1Promise = resolve)
     queue.push({
       id: 'task-1',
       data: 'a',
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-1')
-        return task1Promise
+        return new Promise((resolve) => resolveTask1Promise = resolve)
       }
     })
     assert.deepEqual(executedTasks, ['task-1'])
 
     let resolveTask2Promise
-    const task2Promise = new Promise((resolve) => resolveTask2Promise = resolve)
     queue.push({
       id: 'task-2',
       data: 'b',
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-2')
-        return task2Promise
+        return new Promise((resolve) => resolveTask2Promise = resolve)
       }
     })
     assert.deepEqual(executedTasks, ['task-1'])
 
     let resolveTask3Promise
-    const task3Promise = new Promise((resolve) => resolveTask3Promise = resolve)
     queue.push({
       id: 'task-3',
       data: 'c',
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-3')
-        return task3Promise
+        return new Promise((resolve) => resolveTask3Promise = resolve)
       }
     })
     assert.deepEqual(executedTasks, ['task-1'])
 
     resolveTask1Promise()
-    await task1Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-2'])
+    await condition(() => deepEqual(executedTasks, ['task-1', 'task-2']))
 
     resolveTask2Promise()
-    await task2Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-2', 'task-3'])
+    await condition(() => deepEqual(executedTasks, ['task-1', 'task-2', 'task-3']))
 
     resolveTask3Promise()
-    await task3Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-2', 'task-3'])
+    await condition(() => !queue.isLooping())
 
     let resolveTask4Promise
-    const task4Promise = new Promise((resolve) => resolveTask4Promise = resolve)
     queue.push({
       id: 'task-4',
       data: 'e',
       coalesce: (d) => d,
       execute: (d) => {
         executedTasks.push('task-4')
-        return task4Promise
+        return new Promise((resolve) => resolveTask4Promise = resolve)
       }
     })
     assert.deepEqual(executedTasks, ['task-1', 'task-2', 'task-3', 'task-4'])
 
     resolveTask4Promise()
-    await task4Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-2', 'task-3', 'task-4'])
+    await condition(() => !queue.isLooping())
   })
 
   test('coalescing', async () => {
@@ -196,17 +189,13 @@ suite('TaskQueue', () => {
       }
     })
 
+    assert.deepEqual(executedTasks, ['task-1'])
+
     queue.cancelPending('task-2')
     resolveTask1Promise()
-    await task1Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-3'])
-
     resolveTask2Promise()
-    await task2Promise
-    assert.deepEqual(executedTasks, ['task-1', 'task-3'])
-
     resolveTask3Promise()
-    await task3Promise
+    await condition(() => !queue.isLooping())
     assert.deepEqual(executedTasks, ['task-1', 'task-3'])
   })
 
@@ -253,3 +242,18 @@ suite('TaskQueue', () => {
     assert.throws(() => queue.cancelPending('task-1'))
   })
 })
+
+function condition (fn, message) {
+  return new Promise((resolve) => {
+    function callback () {
+      const result = fn()
+      if (result) {
+        resolve()
+      } else {
+        setTimeout(callback, 5)
+      }
+    }
+
+    callback()
+  })
+}
