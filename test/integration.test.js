@@ -154,6 +154,7 @@ suite('Client Integration', () => {
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
+    assert(guestPortalDelegate.getActiveSharedEditor() === null)
 
     await hostPortal.setActiveSharedEditor(hostSharedEditor)
     await condition(() => guestPortalDelegate.getActiveSharedEditor() != null)
