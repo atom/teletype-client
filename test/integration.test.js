@@ -168,7 +168,7 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
   })
 
-  suite('heartbeat', () => {
+  suite('connectedness', () => {
     const HEARTBEAT_INTERVAL_IN_MS = 10
     const EVICTION_PERIOD_IN_MS = 2 * HEARTBEAT_INTERVAL_IN_MS
 
@@ -236,7 +236,29 @@ suite('Client Integration', () => {
       )
     })
 
-    test('guest disconnection', async () => {
+    test('guest leaving a portal', async () => {
+      // TODO
+    })
+
+    test('host closing a portal', async () => {
+      assert(!guest1PortalDelegate.isClosed() && !guest2PortalDelegate.isClosed() && !guest3PortalDelegate.isClosed())
+      hostPortal.close()
+      await condition(() => guest1PortalDelegate.isClosed() && guest2PortalDelegate.isClosed() && guest3PortalDelegate.isClosed())
+
+      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
+
+      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
+      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+
+      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
+      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
+      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+    })
+
+    test('losing connection to guest', async () => {
       await guest1Portal.simulateNetworkFailure()
       await condition(async () => deepEqual(
         await server.heartbeatService.findDeadSites(),
@@ -252,7 +274,7 @@ suite('Client Integration', () => {
       assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
     })
 
-    test('host disconnection', async () => {
+    test('losing connection to host', async () => {
       await hostPortal.simulateNetworkFailure()
       await condition(async () => deepEqual(
         await server.heartbeatService.findDeadSites(),

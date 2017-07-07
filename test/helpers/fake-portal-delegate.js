@@ -1,7 +1,16 @@
 module.exports =
 class FakePortalDelegate {
   constructor () {
+    this.hostClosedPortal = false
     this.hostDisconnected = false
+  }
+
+  hostDidClosePortal () {
+    this.hostClosedPortal = true
+  }
+
+  isClosed () {
+    return this.hostClosedPortal
   }
 
   hostDidDisconnect () {
