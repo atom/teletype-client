@@ -280,9 +280,9 @@ suite('Client Integration', () => {
         await server.heartbeatService.findDeadSites(),
         [{portalId: hostPortal.id, id: hostPortal.siteId}]
       ), 'Expected to find one dead site: Host')
-      assert(!guest1PortalDelegate.hasHostDisconnected() && !guest2PortalDelegate.hasHostDisconnected() && !guest3PortalDelegate.hasHostDisconnected())
+      assert(!guest1PortalDelegate.hasHostLostConnection() && !guest2PortalDelegate.hasHostLostConnection() && !guest3PortalDelegate.hasHostLostConnection())
       server.heartbeatService.evictDeadSites()
-      await condition(() => guest1PortalDelegate.hasHostDisconnected() && guest2PortalDelegate.hasHostDisconnected() && guest3PortalDelegate.hasHostDisconnected())
+      await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
       assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
       assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))

@@ -2,7 +2,7 @@ module.exports =
 class FakePortalDelegate {
   constructor () {
     this.hostClosedPortal = false
-    this.hostDisconnected = false
+    this.hostLostConnection = false
   }
 
   hostDidClosePortal () {
@@ -13,12 +13,12 @@ class FakePortalDelegate {
     return this.hostClosedPortal
   }
 
-  hostDidDisconnect () {
-    this.hostDisconnected = true
+  hostDidLoseConnection () {
+    this.hostLostConnection = true
   }
 
-  hasHostDisconnected () {
-    return this.hostDisconnected
+  hasHostLostConnection () {
+    return this.hostLostConnection
   }
 
   setActiveSharedEditor (sharedEditor) {
