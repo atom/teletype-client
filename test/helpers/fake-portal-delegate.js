@@ -21,6 +21,6 @@ class FakePortalDelegate {
   }
 
   getActiveBufferURI () {
-    return this.getActiveSharedEditor().sharedBuffer.uri
+    return (this.sharedEditor) ? this.sharedEditor.sharedBuffer.uri : null
   }
 }
