@@ -195,6 +195,24 @@ suite('TaskQueue', () => {
     assert.throws(() => queue.push({id: 'task-3', data: 'c', coalesce: (d) => d, execute: (d) => {}}))
     assert.throws(() => queue.cancelPending('task-1'))
   })
+
+  test('preventing simultaneous loops', async () => {
+    const queue = new TaskQueue()
+    queue.push({
+      id: 'task',
+      data: 'a',
+      coalesce: (d) => d,
+      execute: (d) => new Promise(() => {}) // a promise that is never going to resolve
+    })
+    assert(queue.isLooping())
+    let exception
+    try {
+      await queue.loop()
+    } catch (e) {
+      exception = e
+    }
+    assert(exception, 'expected error when starting simultaneous loops')
+  })
 })
 
 function condition (fn) {
