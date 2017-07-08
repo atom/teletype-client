@@ -4,18 +4,22 @@
   "description": "",
   "main": "lib/real-time-client.js",
   "scripts": {
-    "test": "mocha **/*.test.js --ui=tdd"
+    "test": "electron-mocha **/*.test.js --ui=tdd --renderer"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@atom/tachyon": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/tachyon/tarball/v0.3.2",
-    "pusher-js": "^4.1.0"
+    "pusher-js": "^4.1.0",
+    "simple-peer": "^8.1.1"
   },
   "devDependencies": {
     "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/v0.8.1",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
-    "mocha": "^3.4.2"
+    "electron": "^1.6.11",
+    "electron-mocha": "^4.0.0",
+    "mocha": "^3.4.2",
+    "wrtc": "0.0.62"
   }
 }
