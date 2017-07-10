@@ -168,7 +168,7 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
   })
 
-  suite('connectedness', () => {
+  suite('leaving, closing, or losing connection to a portal', () => {
     const HEARTBEAT_INTERVAL_IN_MS = 10
     const EVICTION_PERIOD_IN_MS = 2 * HEARTBEAT_INTERVAL_IN_MS
 
