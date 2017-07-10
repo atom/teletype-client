@@ -9,7 +9,7 @@ class FakePortalDelegate {
     this.hostClosedPortal = true
   }
 
-  isClosed () {
+  hasHostClosedPortal () {
     return this.hostClosedPortal
   }
 

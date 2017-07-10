@@ -241,9 +241,9 @@ suite('Client Integration', () => {
     })
 
     test('host closing a portal', async () => {
-      assert(!guest1PortalDelegate.isClosed() && !guest2PortalDelegate.isClosed() && !guest3PortalDelegate.isClosed())
+      assert(!guest1PortalDelegate.hasHostClosedPortal() && !guest2PortalDelegate.hasHostClosedPortal() && !guest3PortalDelegate.hasHostClosedPortal())
       hostPortal.close()
-      await condition(() => guest1PortalDelegate.isClosed() && guest2PortalDelegate.isClosed() && guest3PortalDelegate.isClosed())
+      await condition(() => guest1PortalDelegate.hasHostClosedPortal() && guest2PortalDelegate.hasHostClosedPortal() && guest3PortalDelegate.hasHostClosedPortal())
 
       assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
       assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
