@@ -22,7 +22,7 @@ suite('PeerRegistry', () => {
     return server.reset()
   })
 
-  test('initiating and receiving peer-to-peer connections', async () => {
+  test('connection, notifications, and requests/responses between two peers', async () => {
     const peer1Registry = new PeerRegistry({
       peerId: '1',
       restGateway: server.restGateway,
@@ -48,30 +48,52 @@ suite('PeerRegistry', () => {
     })
     await peer2Registry.subscribe()
 
+    // Connection
     const peer1ConnectionToPeer2 = await peer1Registry.connect('2')
     await condition(() => peer2ConnectionToPeer1 != null)
 
-    const disposable1 = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
-      assert.equal(request.toString(), 'marco')
-      peer2ConnectionToPeer1.respond(requestId, Buffer.from('polo'))
-    })
-
+    // Notifications
     {
+      const peer2Notifications = []
+      peer2ConnectionToPeer1.onNotification((notification) => {
+        peer2Notifications.push(notification.toString())
+      })
+
+      // Single-part
+      peer1ConnectionToPeer2.notify(Buffer.from('hello'))
+      await condition(() => deepEqual(peer2Notifications, ['hello']))
+      peer2Notifications.length = 0
+
+      // Multi-part
+      const longNotification = 'x'.repeat(22)
+      peer1ConnectionToPeer2.notify(Buffer.from(longNotification))
+      await condition(() => deepEqual(peer2Notifications, [longNotification]))
+      peer2Notifications.length = 0
+    }
+
+    // Single-part requests and responses
+    {
+      const disposable = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
+        assert.equal(request.toString(), 'marco')
+        peer2ConnectionToPeer1.respond(requestId, Buffer.from('polo'))
+        disposable.dispose()
+      })
+
       const response = await peer1ConnectionToPeer2.request(Buffer.from('marco'))
       assert.equal(response.toString(), 'polo')
     }
 
-    // Test a request and response that exceed the fragment size
-    const longRequest = 'x'.repeat(22)
-    const longResponse = 'y'.repeat(22)
-
-    disposable1.dispose()
-    peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
-      assert.equal(request.toString(), longRequest)
-      peer2ConnectionToPeer1.respond(requestId, Buffer.from(longResponse))
-    })
-
+    // Multi-part requests and responses
     {
+      const longRequest = 'x'.repeat(22)
+      const longResponse = 'y'.repeat(22)
+
+      const disposable = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
+        assert.equal(request.toString(), longRequest)
+        peer2ConnectionToPeer1.respond(requestId, Buffer.from(longResponse))
+        disposable.dispose()
+      })
+
       const response = await peer1ConnectionToPeer2.request(Buffer.from(longRequest))
       assert.equal(response.toString(), longResponse)
     }
