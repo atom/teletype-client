@@ -22,7 +22,7 @@ suite('PeerRegistry', () => {
     return server.reset()
   })
 
-  test.only('initiating and receiving peer-to-peer connections', async () => {
+  test('initiating and receiving peer-to-peer connections', async () => {
     const peer1Registry = new PeerRegistry({
       peerId: '1',
       restGateway: server.restGateway,
@@ -50,23 +50,13 @@ suite('PeerRegistry', () => {
     const peer1ConnectionToPeer2 = await peer1Registry.connect('2')
     await condition(() => peer2ConnectionToPeer1 != null)
 
-    peer2MessagesFromPeer1 = []
-    peer2ConnectionToPeer1.on('data', (data) => {
-      peer2MessagesFromPeer1.push(data.toString())
-      peer2ConnectionToPeer1.send('world')
+    peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
+      assert.equal(request.toString(), 'marco')
+      peer2ConnectionToPeer1.respond(requestId, Buffer.from('polo'))
     })
 
-    peer1MessagesFromPeer2 = []
-    peer1ConnectionToPeer2.on('data', (data) => {
-      peer1MessagesFromPeer2.push(data.toString())
-    })
-
-    peer1ConnectionToPeer2.send('hello')
-
-    await condition(() =>
-      deepEqual(peer2MessagesFromPeer1, ['hello']) &&
-      deepEqual(peer1MessagesFromPeer2, ['world'])
-    )
+    const response = await peer1ConnectionToPeer2.request(Buffer.from('marco'))
+    assert.equal(response.toString(), 'polo')
   })
 })
 
