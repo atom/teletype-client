@@ -43,20 +43,38 @@ suite('PeerRegistry', () => {
           assert.equal(peerId, '1')
           peer2ConnectionToPeer1 = connection
         }
-      }
+      },
+      fragmentSize: 10
     })
     await peer2Registry.subscribe()
 
     const peer1ConnectionToPeer2 = await peer1Registry.connect('2')
     await condition(() => peer2ConnectionToPeer1 != null)
 
-    peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
+    const disposable1 = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
       assert.equal(request.toString(), 'marco')
       peer2ConnectionToPeer1.respond(requestId, Buffer.from('polo'))
     })
 
-    const response = await peer1ConnectionToPeer2.request(Buffer.from('marco'))
-    assert.equal(response.toString(), 'polo')
+    {
+      const response = await peer1ConnectionToPeer2.request(Buffer.from('marco'))
+      assert.equal(response.toString(), 'polo')
+    }
+
+    // Test a request and response that exceed the fragment size
+    const longRequest = 'x'.repeat(22)
+    const longResponse = 'y'.repeat(22)
+
+    disposable1.dispose()
+    peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
+      assert.equal(request.toString(), longRequest)
+      peer2ConnectionToPeer1.respond(requestId, Buffer.from(longResponse))
+    })
+
+    {
+      const response = await peer1ConnectionToPeer2.request(Buffer.from(longRequest))
+      assert.equal(response.toString(), longResponse)
+    }
   })
 })
 
