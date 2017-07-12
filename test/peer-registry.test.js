@@ -8,10 +8,7 @@ suite('PeerRegistry', () => {
   let server
 
   suiteSetup(async () => {
-    server = await startTestServer({
-      databaseURL: process.env.TEST_DATABASE_URL,
-      maxMessageSizeInBytes: 100
-    })
+    server = await startTestServer()
   })
 
   suiteTeardown(() => {
@@ -22,7 +19,7 @@ suite('PeerRegistry', () => {
     return server.reset()
   })
 
-  test('connection, notifications, and requests/responses between two peers', async () => {
+  test('connection and sending messages between peers', async () => {
     const peer1Registry = new PeerRegistry({
       peerId: '1',
       restGateway: server.restGateway,
@@ -52,51 +49,21 @@ suite('PeerRegistry', () => {
     const peer1ConnectionToPeer2 = await peer1Registry.connect('2')
     await condition(() => peer2ConnectionToPeer1 != null)
 
-    // Notifications
-    {
-      const peer2Notifications = []
-      peer2ConnectionToPeer1.onNotification((notification) => {
-        peer2Notifications.push(notification.toString())
-      })
+    const peer2Inbox = []
+    peer2ConnectionToPeer1.onReceive((message) => {
+      peer2Inbox.push(message.toString())
+    })
 
-      // Single-part
-      peer1ConnectionToPeer2.notify(Buffer.from('hello'))
-      await condition(() => deepEqual(peer2Notifications, ['hello']))
-      peer2Notifications.length = 0
+    // Single-part messages
+    peer1ConnectionToPeer2.send(Buffer.from('hello'))
+    await condition(() => deepEqual(peer2Inbox, ['hello']))
+    peer2Inbox.length = 0
 
-      // Multi-part
-      const longNotification = 'x'.repeat(22)
-      peer1ConnectionToPeer2.notify(Buffer.from(longNotification))
-      await condition(() => deepEqual(peer2Notifications, [longNotification]))
-      peer2Notifications.length = 0
-    }
-
-    // Single-part requests and responses
-    {
-      const disposable = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
-        assert.equal(request.toString(), 'marco')
-        peer2ConnectionToPeer1.respond(requestId, Buffer.from('polo'))
-        disposable.dispose()
-      })
-
-      const response = await peer1ConnectionToPeer2.request(Buffer.from('marco'))
-      assert.equal(response.toString(), 'polo')
-    }
-
-    // Multi-part requests and responses
-    {
-      const longRequest = 'x'.repeat(22)
-      const longResponse = 'y'.repeat(22)
-
-      const disposable = peer2ConnectionToPeer1.onRequest(({requestId, request}) => {
-        assert.equal(request.toString(), longRequest)
-        peer2ConnectionToPeer1.respond(requestId, Buffer.from(longResponse))
-        disposable.dispose()
-      })
-
-      const response = await peer1ConnectionToPeer2.request(Buffer.from(longRequest))
-      assert.equal(response.toString(), longResponse)
-    }
+    // Multi-part messages
+    const longMessage = 'x'.repeat(22)
+    peer1ConnectionToPeer2.send(Buffer.from(longMessage))
+    await condition(() => deepEqual(peer2Inbox, [longMessage]))
+    peer2Inbox.length = 0
   })
 })
 
