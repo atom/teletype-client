@@ -36,8 +36,8 @@ suite('PeerRegistry', () => {
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway,
       delegate: {
-        didReceiveIncomingConnection (peerId, connection) {
-          assert.equal(peerId, '1')
+        didReceiveIncomingConnection (connection) {
+          assert.equal(connection.peerId, '1')
           peer2ConnectionToPeer1 = connection
         }
       },
