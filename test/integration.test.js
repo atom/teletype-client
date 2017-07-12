@@ -237,7 +237,14 @@ suite('Client Integration', () => {
     })
 
     test('guest leaving a portal', async () => {
-      // TODO
+      guest1Portal.leave()
+      await condition(() =>
+        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
+        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+      )
+      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
     })
 
     test('host closing a portal', async () => {
