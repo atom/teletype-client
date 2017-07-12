@@ -1,10 +1,10 @@
 require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
-const PeerRegistry = require('../lib/peer-registry')
+const PeerPool = require('../lib/peer-pool')
 const {startTestServer} = require('@atom/real-time-server')
 
-suite('PeerRegistry', () => {
+suite('PeerPool', () => {
   let server
 
   suiteSetup(async () => {
@@ -20,7 +20,7 @@ suite('PeerRegistry', () => {
   })
 
   test('connection and sending messages between peers', async () => {
-    const peer1Registry = new PeerRegistry({
+    const peer1Pool = new PeerPool({
       peerId: '1',
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway,
@@ -28,10 +28,10 @@ suite('PeerRegistry', () => {
         didReceiveIncomingConnection () {}
       }
     })
-    await peer1Registry.subscribe()
+    await peer1Pool.subscribe()
 
     let peer2ConnectionToPeer1
-    const peer2Registry = new PeerRegistry({
+    const peer2Pool = new PeerPool({
       peerId: '2',
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway,
@@ -43,10 +43,10 @@ suite('PeerRegistry', () => {
       },
       fragmentSize: 10
     })
-    await peer2Registry.subscribe()
+    await peer2Pool.subscribe()
 
     // Connection
-    const peer1ConnectionToPeer2 = await peer1Registry.connect('2')
+    const peer1ConnectionToPeer2 = await peer1Pool.connect('2')
     await condition(() => peer2ConnectionToPeer1 != null)
 
     const peer2Inbox = []
