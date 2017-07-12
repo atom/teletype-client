@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+message NetworkMessage {
+  oneof body {
+    StarConnection star_connection = 1;
+    StarBroadcast star_broadcast = 2;
+  }
+
+  message StarConnection {
+    string network_id = 1;
+  }
+
+  message StarBroadcast {
+    string network_id = 1;
+    string sender_id = 2;
+    bytes body = 3;
+  }
+}
