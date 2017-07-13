@@ -7,7 +7,7 @@ async function buildPeerPool (peerId, server) {
     restGateway: server.restGateway,
     pubSubGateway: server.pubSubGateway,
   })
-  await peerPool.subscribe()
+  await peerPool.initialize()
   peerPool.testInbox = []
   peerPool.onReceive(({senderId, message}) => {
     peerPool.testInbox.push({
