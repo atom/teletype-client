@@ -85,6 +85,19 @@ suite('Router', () => {
       const response = await spoke1Router.request('spoke-2', 'channel-2', 'request from spoke 1 on channel 2')
       assert.equal(response.toString(), 'response from spoke 2 on channel 2')
     }
+
+    // Ensure that multiple responses are disallowed
+    {
+      spoke2Router.onRequest('channel-3', ({senderId, requestId, request}) => {
+        spoke2Router.respond(requestId, 'response from spoke 2 on channel 3')
+        assert.throws(
+          () => spoke2Router.respond(requestId, 'duplicate response'),
+          'Multiple responses to the same request are not allowed'
+        )
+      })
+
+      await spoke1Router.request('spoke-2', 'channel-3', 'request from spoke 1 on channel 3')
+    }
   })
 })
 
