@@ -22,3 +22,15 @@ message NetworkMessage {
     bytes body = 2;
   }
 }
+
+message RouterMessage {
+  string channel_id = 1;
+
+  oneof variant {
+    Notification notification = 2;
+  }
+
+  message Notification {
+    bytes body = 1;
+  }
+}
