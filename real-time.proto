@@ -5,10 +5,17 @@ message NetworkMessage {
 
   oneof variant {
     StarConnection star_connection = 2;
-    StarBroadcast star_broadcast = 3;
+    StarUnicast star_unicast = 3;
+    StarBroadcast star_broadcast = 4;
   }
 
   message StarConnection {}
+
+  message StarUnicast {
+    string sender_id = 1;
+    string recipient_id = 2;
+    bytes body = 3;
+  }
 
   message StarBroadcast {
     string sender_id = 1;

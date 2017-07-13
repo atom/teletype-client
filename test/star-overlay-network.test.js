@@ -21,6 +21,51 @@ suite('StarOverlayNetwork', () => {
     return server.reset()
   })
 
+  suite('unicast', () => {
+    test('sends messages to only one member of the network', async () => {
+      const peer1Pool = await buildPeerPool('peer-1', server)
+      const peer2Pool = await buildPeerPool('peer-2', server)
+      const peer3Pool = await buildPeerPool('peer-3', server)
+
+      const hub = buildNetwork('network-a', peer1Pool, true)
+      const spoke1 = buildNetwork('network-a', peer2Pool, false)
+      const spoke2 = buildNetwork('network-a', peer3Pool, false)
+      await spoke1.connectTo('peer-1')
+      await spoke2.connectTo('peer-1')
+
+      spoke1.unicast('peer-3', Buffer.from('spoke-to-spoke'))
+      spoke2.unicast('peer-1', Buffer.from('spoke-to-hub'))
+      hub.unicast('peer-2', Buffer.from('hub-to-spoke'))
+
+      await condition(() => deepEqual(hub.testInbox, [
+        {senderId: 'peer-3', message: 'spoke-to-hub'}
+      ]))
+      await condition(() => deepEqual(spoke1.testInbox, [
+        {senderId: 'peer-1', message: 'hub-to-spoke'}
+      ]))
+      await condition(() => deepEqual(spoke2.testInbox, [
+        {senderId: 'peer-2', message: 'spoke-to-spoke'}
+      ]))
+    })
+
+    test('sends messages only to peers that are part of the network', async () => {
+      const peer1Pool = await buildPeerPool('peer-1', server)
+      const peer2Pool = await buildPeerPool('peer-2', server)
+      const peer3Pool = await buildPeerPool('peer-3', server)
+
+      const hub = buildNetwork('network-a', peer1Pool, true)
+      const spoke = buildNetwork('network-a', peer2Pool, false)
+      await spoke.connectTo('peer-1')
+      await peer1Pool.connectTo('peer-3')
+
+      spoke.unicast('peer-3', Buffer.from('this should never arrive'))
+      peer1Pool.send('peer-3', Buffer.from('direct message'))
+      await condition(() => deepEqual(peer3Pool.testInbox, [
+        {senderId: 'peer-1', message: 'direct message'}
+      ]))
+    })
+  })
+
   suite('broadcast', () => {
     test('sends messages to all other members of the network', async () => {
       const peer1Pool = await buildPeerPool('peer-1', server)
