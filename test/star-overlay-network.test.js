@@ -2,9 +2,9 @@ require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
-const StarOverlayNetwork = require('../lib/star-overlay-network')
 const condition = require('./helpers/condition')
 const buildPeerPool = require('./helpers/build-peer-pool')
+const buildStarNetwork = require('./helpers/build-star-network')
 
 suite('StarOverlayNetwork', () => {
   let server
@@ -27,9 +27,9 @@ suite('StarOverlayNetwork', () => {
       const peer2Pool = await buildPeerPool('peer-2', server)
       const peer3Pool = await buildPeerPool('peer-3', server)
 
-      const hub = buildNetwork('network-a', peer1Pool, true)
-      const spoke1 = buildNetwork('network-a', peer2Pool, false)
-      const spoke2 = buildNetwork('network-a', peer3Pool, false)
+      const hub = buildStarNetwork('network-a', peer1Pool, true)
+      const spoke1 = buildStarNetwork('network-a', peer2Pool, false)
+      const spoke2 = buildStarNetwork('network-a', peer3Pool, false)
       await spoke1.connectTo('peer-1')
       await spoke2.connectTo('peer-1')
 
@@ -53,8 +53,8 @@ suite('StarOverlayNetwork', () => {
       const peer2Pool = await buildPeerPool('peer-2', server)
       const peer3Pool = await buildPeerPool('peer-3', server)
 
-      const hub = buildNetwork('network-a', peer1Pool, true)
-      const spoke = buildNetwork('network-a', peer2Pool, false)
+      const hub = buildStarNetwork('network-a', peer1Pool, true)
+      const spoke = buildStarNetwork('network-a', peer2Pool, false)
       await spoke.connectTo('peer-1')
       await peer1Pool.connectTo('peer-3')
 
@@ -73,22 +73,22 @@ suite('StarOverlayNetwork', () => {
       const peer3Pool = await buildPeerPool('peer-3', server)
       const peer4Pool = await buildPeerPool('peer-4', server)
 
-      const hubA = buildNetwork('network-a', peer1Pool, true)
-      const spokeA1 = buildNetwork('network-a', peer2Pool, false)
-      const spokeA2 = buildNetwork('network-a', peer3Pool, false)
+      const hubA = buildStarNetwork('network-a', peer1Pool, true)
+      const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
+      const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
       await spokeA1.connectTo('peer-1')
       await spokeA2.connectTo('peer-1')
 
-      const hubB = buildNetwork('network-b', peer1Pool, true)
-      const spokeB1 = buildNetwork('network-b', peer2Pool, false)
-      const spokeB2 = buildNetwork('network-b', peer3Pool, false)
+      const hubB = buildStarNetwork('network-b', peer1Pool, true)
+      const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
+      const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
 
       await spokeB1.connectTo('peer-1')
       await spokeB2.connectTo('peer-1')
 
-      const hubC = buildNetwork('network-c', peer2Pool, true)
-      const spokeC1 = buildNetwork('network-c', peer1Pool, false)
-      const spokeC2 = buildNetwork('network-c', peer3Pool, false)
+      const hubC = buildStarNetwork('network-c', peer2Pool, true)
+      const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
+      const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
 
       await spokeC1.connectTo('peer-2')
       await spokeC2.connectTo('peer-2')
@@ -130,9 +130,9 @@ suite('StarOverlayNetwork', () => {
       const peer3Pool = await buildPeerPool('peer-3', server)
       const peer4Pool = await buildPeerPool('peer-4', server)
 
-      const hub = buildNetwork('some-network-id', peer1Pool, true)
-      const spoke1 = buildNetwork('some-network-id', peer2Pool, false)
-      const spoke2 = buildNetwork('some-network-id', peer3Pool, false)
+      const hub = buildStarNetwork('some-network-id', peer1Pool, true)
+      const spoke1 = buildStarNetwork('some-network-id', peer2Pool, false)
+      const spoke2 = buildStarNetwork('some-network-id', peer3Pool, false)
       await spoke1.connectTo('peer-1')
       await spoke2.connectTo('peer-1')
 
@@ -163,15 +163,3 @@ suite('StarOverlayNetwork', () => {
     })
   })
 })
-
-function buildNetwork (id, peerPool, isHub) {
-  const network = new StarOverlayNetwork({id, peerPool, isHub})
-  network.testInbox = []
-  network.onReceive(({senderId, message}) => {
-    network.testInbox.push({
-      senderId,
-      message: message.toString()
-    })
-  })
-  return network
-}
