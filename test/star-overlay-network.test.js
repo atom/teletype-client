@@ -2,8 +2,9 @@ require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
-const PeerPool = require('../lib/peer-pool')
 const StarOverlayNetwork = require('../lib/star-overlay-network')
+const condition = require('./helpers/condition')
+const buildPeerPool = require('./helpers/build-peer-pool')
 
 suite('StarOverlayNetwork', () => {
   let server
@@ -111,23 +112,6 @@ suite('StarOverlayNetwork', () => {
   })
 })
 
-async function buildPeerPool (peerId, server) {
-  const peerPool = new PeerPool({
-    peerId,
-    restGateway: server.restGateway,
-    pubSubGateway: server.pubSubGateway,
-  })
-  await peerPool.subscribe()
-  peerPool.testInbox = []
-  peerPool.onReceive(({senderId, message}) => {
-    peerPool.testInbox.push({
-      senderId,
-      message: message.toString()
-    })
-  })
-  return peerPool
-}
-
 function buildNetwork (id, peerPool, isHub) {
   const network = new StarOverlayNetwork({id, peerPool, isHub})
   network.testInbox = []
@@ -138,24 +122,4 @@ function buildNetwork (id, peerPool, isHub) {
     })
   })
   return network
-}
-
-function condition (fn) {
-  const timeoutError = new Error('Condition timed out: ' + fn.toString())
-  Error.captureStackTrace(timeoutError, condition)
-
-  return new Promise((resolve, reject) => {
-    const intervalId = global.setInterval(() => {
-      if (fn()) {
-        global.clearTimeout(timeout)
-        global.clearInterval(intervalId)
-        resolve()
-      }
-    }, 5)
-
-    const timeout = global.setTimeout(() => {
-      global.clearInterval(intervalId)
-      reject(timeoutError)
-    }, 500)
-  })
 }
