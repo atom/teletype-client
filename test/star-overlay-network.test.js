@@ -33,9 +33,9 @@ suite('StarOverlayNetwork', () => {
       await spoke1.connectTo('peer-1')
       await spoke2.connectTo('peer-1')
 
-      spoke1.unicast('peer-3', Buffer.from('spoke-to-spoke'))
-      spoke2.unicast('peer-1', Buffer.from('spoke-to-hub'))
-      hub.unicast('peer-2', Buffer.from('hub-to-spoke'))
+      spoke1.unicast('peer-3', 'spoke-to-spoke')
+      spoke2.unicast('peer-1', 'spoke-to-hub')
+      hub.unicast('peer-2', 'hub-to-spoke')
 
       await condition(() => deepEqual(hub.testInbox, [
         {senderId: 'peer-3', message: 'spoke-to-hub'}
@@ -58,8 +58,8 @@ suite('StarOverlayNetwork', () => {
       await spoke.connectTo('peer-1')
       await peer1Pool.connectTo('peer-3')
 
-      spoke.unicast('peer-3', Buffer.from('this should never arrive'))
-      peer1Pool.send('peer-3', Buffer.from('direct message'))
+      spoke.unicast('peer-3', 'this should never arrive')
+      peer1Pool.send('peer-3', 'direct message')
       await condition(() => deepEqual(peer3Pool.testInbox, [
         {senderId: 'peer-1', message: 'direct message'}
       ]))
@@ -93,10 +93,10 @@ suite('StarOverlayNetwork', () => {
       await spokeC1.connectTo('peer-2')
       await spokeC2.connectTo('peer-2')
 
-      hubA.broadcast(Buffer.from('a1'))
-      spokeA1.broadcast(Buffer.from('a2'))
-      spokeB1.broadcast(Buffer.from('b'))
-      spokeC1.broadcast(Buffer.from('c'))
+      hubA.broadcast('a1')
+      spokeA1.broadcast('a2')
+      spokeB1.broadcast('b')
+      spokeC1.broadcast('c')
 
       await condition(() => deepEqual(hubA.testInbox, [
         {senderId: 'peer-2', message: 'a2'}
@@ -138,7 +138,7 @@ suite('StarOverlayNetwork', () => {
 
       await peer4Pool.connectTo('peer-1')
 
-      spoke1.broadcast(Buffer.from('hello'))
+      spoke1.broadcast('hello')
       await condition(() => deepEqual(hub.testInbox, [{
         senderId: 'peer-2',
         message: 'hello'
@@ -149,14 +149,14 @@ suite('StarOverlayNetwork', () => {
       }]))
 
       // Ensure that spoke1 did not receive their own broadcast
-      peer1Pool.send('peer-2', Buffer.from('direct message'))
+      peer1Pool.send('peer-2', 'direct message')
       await condition(() => deepEqual(peer2Pool.testInbox, [
         {senderId: 'peer-1', message: 'direct message'}
       ]))
 
       // Ensure that peer 4 did not receive the broadcast since they are
       // not a member of the network
-      peer1Pool.send('peer-4', Buffer.from('direct message'))
+      peer1Pool.send('peer-4', 'direct message')
       await condition(() => deepEqual(peer4Pool.testInbox, [
         {senderId: 'peer-1', message: 'direct message'}
       ]))
