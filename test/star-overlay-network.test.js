@@ -26,9 +26,9 @@ suite('StarOverlayNetwork', () => {
     const peer3Pool = await buildPeerPool('peer-3', server)
     const peer4Pool = await buildPeerPool('peer-4', server)
 
-    const hub = buildNetwork('network-1', peer1Pool, true)
-    const spoke1 = buildNetwork('network-1', peer2Pool, false)
-    const spoke2 = buildNetwork('network-1', peer3Pool, false)
+    const hub = buildNetwork('some-network-id', peer1Pool, true)
+    const spoke1 = buildNetwork('some-network-id', peer2Pool, false)
+    const spoke2 = buildNetwork('some-network-id', peer3Pool, false)
     await spoke1.connectTo('peer-1')
     await spoke2.connectTo('peer-1')
 
@@ -58,6 +58,57 @@ suite('StarOverlayNetwork', () => {
     ]))
   })
 
+  test('messages are routed to the appropriate network instance', async () => {
+    const peer1Pool = await buildPeerPool('peer-1', server)
+    const peer2Pool = await buildPeerPool('peer-2', server)
+    const peer3Pool = await buildPeerPool('peer-3', server)
+    const peer4Pool = await buildPeerPool('peer-4', server)
+
+    const hubA = buildNetwork('network-a', peer1Pool, true)
+    const spokeA1 = buildNetwork('network-a', peer2Pool, false)
+    const spokeA2 = buildNetwork('network-a', peer3Pool, false)
+    await spokeA1.connectTo('peer-1')
+    await spokeA2.connectTo('peer-1')
+
+    const hubB = buildNetwork('network-b', peer1Pool, true)
+    const spokeB1 = buildNetwork('network-b', peer2Pool, false)
+    const spokeB2 = buildNetwork('network-b', peer3Pool, false)
+
+    await spokeB1.connectTo('peer-1')
+    await spokeB2.connectTo('peer-1')
+
+    const hubC = buildNetwork('network-c', peer2Pool, true)
+    const spokeC1 = buildNetwork('network-c', peer1Pool, false)
+    const spokeC2 = buildNetwork('network-c', peer3Pool, false)
+
+    await spokeC1.connectTo('peer-2')
+    await spokeC2.connectTo('peer-2')
+
+    spokeA1.broadcast(Buffer.from('a'))
+    spokeB1.broadcast(Buffer.from('b'))
+    spokeC1.broadcast(Buffer.from('c'))
+
+    await condition(() => deepEqual(hubA.testInbox, [
+      {senderId: 'peer-2', message: 'a'}
+    ]))
+    await condition(() => deepEqual(spokeA2.testInbox, [
+      {senderId: 'peer-2', message: 'a'}
+    ]))
+
+    await condition(() => deepEqual(hubB.testInbox, [
+      {senderId: 'peer-2', message: 'b'}
+    ]))
+    await condition(() => deepEqual(spokeB2.testInbox, [
+      {senderId: 'peer-2', message: 'b'}
+    ]))
+
+    await condition(() => deepEqual(hubC.testInbox, [
+      {senderId: 'peer-1', message: 'c'}
+    ]))
+    await condition(() => deepEqual(spokeC2.testInbox, [
+      {senderId: 'peer-1', message: 'c'}
+    ]))
+  })
 })
 
 async function buildPeerPool (peerId, server) {

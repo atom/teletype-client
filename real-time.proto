@@ -1,18 +1,17 @@
 syntax = "proto3";
 
 message NetworkMessage {
-  oneof body {
-    StarConnection star_connection = 1;
-    StarBroadcast star_broadcast = 2;
+  string network_id = 1;
+
+  oneof variant {
+    StarConnection star_connection = 2;
+    StarBroadcast star_broadcast = 3;
   }
 
-  message StarConnection {
-    string network_id = 1;
-  }
+  message StarConnection {}
 
   message StarBroadcast {
-    string network_id = 1;
-    string sender_id = 2;
-    bytes body = 3;
+    string sender_id = 1;
+    bytes body = 2;
   }
 }
