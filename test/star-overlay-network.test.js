@@ -59,7 +59,7 @@ suite('StarOverlayNetwork', () => {
     ]))
   })
 
-  test('messages are routed to the appropriate network instance', async () => {
+  test('broadcast', async () => {
     const peer1Pool = await buildPeerPool('peer-1', server)
     const peer2Pool = await buildPeerPool('peer-2', server)
     const peer3Pool = await buildPeerPool('peer-3', server)
@@ -85,15 +85,20 @@ suite('StarOverlayNetwork', () => {
     await spokeC1.connectTo('peer-2')
     await spokeC2.connectTo('peer-2')
 
-    spokeA1.broadcast(Buffer.from('a'))
+    hubA.broadcast(Buffer.from('a1'))
+    spokeA1.broadcast(Buffer.from('a2'))
     spokeB1.broadcast(Buffer.from('b'))
     spokeC1.broadcast(Buffer.from('c'))
 
     await condition(() => deepEqual(hubA.testInbox, [
-      {senderId: 'peer-2', message: 'a'}
+      {senderId: 'peer-2', message: 'a2'}
+    ]))
+    await condition(() => deepEqual(spokeA1.testInbox, [
+      {senderId: 'peer-1', message: 'a1'}
     ]))
     await condition(() => deepEqual(spokeA2.testInbox, [
-      {senderId: 'peer-2', message: 'a'}
+      {senderId: 'peer-1', message: 'a1'},
+      {senderId: 'peer-2', message: 'a2'}
     ]))
 
     await condition(() => deepEqual(hubB.testInbox, [
