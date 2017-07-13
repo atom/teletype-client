@@ -1,4 +1,5 @@
 require('./setup')
+const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
@@ -53,6 +54,37 @@ suite('Router', () => {
       'channel-1': [{senderId: 'spoke-1', message: 'from-spoke-1'}],
       'channel-2': [{senderId: 'hub', message: 'from-hub'}]
     }))
+  })
+
+  test('request/response', async () => {
+    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), true)
+    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), false)
+    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), false)
+    spoke1.connectTo('hub')
+    spoke2.connectTo('hub')
+    await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
+
+    const spoke1Router = new Router(spoke1)
+    const spoke2Router = new Router(spoke2)
+
+    spoke2Router.onRequest('channel-1', ({senderId, requestId, request}) => {
+      assert.equal(request.toString(), 'request from spoke 1 on channel 1')
+      spoke2Router.respond(requestId, 'response from spoke 2 on channel 1')
+    })
+    spoke2Router.onRequest('channel-2', ({senderId, requestId, request}) => {
+      assert.equal(request.toString(), 'request from spoke 1 on channel 2')
+      spoke2Router.respond(requestId, 'response from spoke 2 on channel 2')
+    })
+
+    {
+      const response = await spoke1Router.request('spoke-2', 'channel-1', 'request from spoke 1 on channel 1')
+      assert.equal(response.toString(), 'response from spoke 2 on channel 1')
+    }
+
+    {
+      const response = await spoke1Router.request('spoke-2', 'channel-2', 'request from spoke 1 on channel 2')
+      assert.equal(response.toString(), 'response from spoke 2 on channel 2')
+    }
   })
 })
 

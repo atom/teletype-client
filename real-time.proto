@@ -24,13 +24,25 @@ message NetworkMessage {
 }
 
 message RouterMessage {
-  string channel_id = 1;
-
   oneof variant {
     Notification notification = 2;
+    Request request = 3;
+    Response response = 4;
   }
 
   message Notification {
-    bytes body = 1;
+    string channel_id = 1;
+    bytes body = 2;
+  }
+
+  message Request {
+    string channel_id = 1;
+    uint32 request_id = 2;
+    bytes body = 3;
+  }
+
+  message Response {
+    uint32 request_id = 1;
+    bytes body = 2;
   }
 }
