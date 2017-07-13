@@ -23,45 +23,46 @@ suite('StarOverlayNetwork', () => {
 
   suite('unicast', () => {
     test('sends messages to only one member of the network', async () => {
-      const peer1Pool = await buildPeerPool('peer-1', server)
-      const peer2Pool = await buildPeerPool('peer-2', server)
-      const peer3Pool = await buildPeerPool('peer-3', server)
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
 
-      const hub = buildStarNetwork('network-a', peer1Pool, true)
-      const spoke1 = buildStarNetwork('network-a', peer2Pool, false)
-      const spoke2 = buildStarNetwork('network-a', peer3Pool, false)
-      await spoke1.connectTo('peer-1')
-      await spoke2.connectTo('peer-1')
+      const hub = buildStarNetwork('network-a', hubPool, true)
+      const spoke1 = buildStarNetwork('network-a', spoke1Pool, false)
+      const spoke2 = buildStarNetwork('network-a', spoke2Pool, false)
+      spoke1.connectTo('hub')
+      spoke2.connectTo('hub')
+      await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
 
-      spoke1.unicast('peer-3', 'spoke-to-spoke')
-      spoke2.unicast('peer-1', 'spoke-to-hub')
-      hub.unicast('peer-2', 'hub-to-spoke')
+      spoke1.unicast('spoke-2', 'spoke-to-spoke')
+      spoke2.unicast('hub', 'spoke-to-hub')
+      hub.unicast('spoke-1', 'hub-to-spoke')
 
       await condition(() => deepEqual(hub.testInbox, [
-        {senderId: 'peer-3', message: 'spoke-to-hub'}
+        {senderId: 'spoke-2', message: 'spoke-to-hub'}
       ]))
       await condition(() => deepEqual(spoke1.testInbox, [
-        {senderId: 'peer-1', message: 'hub-to-spoke'}
+        {senderId: 'hub', message: 'hub-to-spoke'}
       ]))
       await condition(() => deepEqual(spoke2.testInbox, [
-        {senderId: 'peer-2', message: 'spoke-to-spoke'}
+        {senderId: 'spoke-1', message: 'spoke-to-spoke'}
       ]))
     })
 
     test('sends messages only to peers that are part of the network', async () => {
-      const peer1Pool = await buildPeerPool('peer-1', server)
-      const peer2Pool = await buildPeerPool('peer-2', server)
-      const peer3Pool = await buildPeerPool('peer-3', server)
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
 
-      const hub = buildStarNetwork('network-a', peer1Pool, true)
-      const spoke = buildStarNetwork('network-a', peer2Pool, false)
-      await spoke.connectTo('peer-1')
-      await peer1Pool.connectTo('peer-3')
+      const hub = buildStarNetwork('network-a', hubPool, true)
+      const spoke = buildStarNetwork('network-a', spoke1Pool, false)
+      await spoke.connectTo('hub')
+      await hubPool.connectTo('spoke-2')
 
-      spoke.unicast('peer-3', 'this should never arrive')
-      peer1Pool.send('peer-3', 'direct message')
-      await condition(() => deepEqual(peer3Pool.testInbox, [
-        {senderId: 'peer-1', message: 'direct message'}
+      spoke.unicast('spoke-2', 'this should never arrive')
+      hubPool.send('spoke-2', 'direct message')
+      await condition(() => deepEqual(spoke2Pool.testInbox, [
+        {senderId: 'hub', message: 'direct message'}
       ]))
     })
   })
@@ -76,22 +77,23 @@ suite('StarOverlayNetwork', () => {
       const hubA = buildStarNetwork('network-a', peer1Pool, true)
       const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
       const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
-      await spokeA1.connectTo('peer-1')
-      await spokeA2.connectTo('peer-1')
+      spokeA1.connectTo('peer-1')
+      spokeA2.connectTo('peer-1')
+      await condition(() => hubA.hasMember('peer-2') && hubA.hasMember('peer-3'))
 
       const hubB = buildStarNetwork('network-b', peer1Pool, true)
       const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
       const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
-
-      await spokeB1.connectTo('peer-1')
-      await spokeB2.connectTo('peer-1')
+      spokeB1.connectTo('peer-1')
+      spokeB2.connectTo('peer-1')
+      await condition(() => hubB.hasMember('peer-2') && hubB.hasMember('peer-3'))
 
       const hubC = buildStarNetwork('network-c', peer2Pool, true)
       const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
       const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
-
-      await spokeC1.connectTo('peer-2')
-      await spokeC2.connectTo('peer-2')
+      spokeC1.connectTo('peer-2')
+      spokeC2.connectTo('peer-2')
+      await condition(() => hubC.hasMember('peer-1') && hubC.hasMember('peer-3'))
 
       hubA.broadcast('a1')
       spokeA1.broadcast('a2')
@@ -125,40 +127,41 @@ suite('StarOverlayNetwork', () => {
     })
 
     test('sends messages only to peers that are part of the network', async () => {
-      const peer1Pool = await buildPeerPool('peer-1', server)
-      const peer2Pool = await buildPeerPool('peer-2', server)
-      const peer3Pool = await buildPeerPool('peer-3', server)
-      const peer4Pool = await buildPeerPool('peer-4', server)
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
+      const nonMemberPool = await buildPeerPool('non-member', server)
 
-      const hub = buildStarNetwork('some-network-id', peer1Pool, true)
-      const spoke1 = buildStarNetwork('some-network-id', peer2Pool, false)
-      const spoke2 = buildStarNetwork('some-network-id', peer3Pool, false)
-      await spoke1.connectTo('peer-1')
-      await spoke2.connectTo('peer-1')
+      const hub = buildStarNetwork('some-network-id', hubPool, true)
+      const spoke1 = buildStarNetwork('some-network-id', spoke1Pool, false)
+      const spoke2 = buildStarNetwork('some-network-id', spoke2Pool, false)
+      spoke1.connectTo('hub')
+      spoke2.connectTo('hub')
+      await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
 
-      await peer4Pool.connectTo('peer-1')
+      await nonMemberPool.connectTo('hub')
 
       spoke1.broadcast('hello')
       await condition(() => deepEqual(hub.testInbox, [{
-        senderId: 'peer-2',
+        senderId: 'spoke-1',
         message: 'hello'
       }]))
       await condition(() => deepEqual(spoke2.testInbox, [{
-        senderId: 'peer-2',
+        senderId: 'spoke-1',
         message: 'hello'
       }]))
 
       // Ensure that spoke1 did not receive their own broadcast
-      peer1Pool.send('peer-2', 'direct message')
-      await condition(() => deepEqual(peer2Pool.testInbox, [
-        {senderId: 'peer-1', message: 'direct message'}
+      hubPool.send('spoke-1', 'direct message')
+      await condition(() => deepEqual(spoke1Pool.testInbox, [
+        {senderId: 'hub', message: 'direct message'}
       ]))
 
       // Ensure that peer 4 did not receive the broadcast since they are
       // not a member of the network
-      peer1Pool.send('peer-4', 'direct message')
-      await condition(() => deepEqual(peer4Pool.testInbox, [
-        {senderId: 'peer-1', message: 'direct message'}
+      hubPool.send('non-member', 'direct message')
+      await condition(() => deepEqual(nonMemberPool.testInbox, [
+        {senderId: 'hub', message: 'direct message'}
       ]))
     })
   })
