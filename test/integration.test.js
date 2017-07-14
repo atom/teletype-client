@@ -70,13 +70,14 @@ suite('Client Integration', () => {
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
 
-    // const guestEditor = new Editor()
+    const guestEditor = new Editor()
     const guestClientEditor = guestPortalDelegate.getActiveTextEditor()
-    // guestClientEditor.setDelegate(guestEditor)
-    // assert.deepEqual(guestEditor.markerLayerForSiteId(1), {
-    //   1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
-    //   2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
-    // })
+    guestClientEditor.setDelegate(guestEditor)
+
+    assert.deepEqual(guestEditor.markerLayerForSiteId(1), {
+      1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+      2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    })
 
     const guestBuffer = new Buffer()
     const guestClientBuffer = guestClientEditor.textBuffer

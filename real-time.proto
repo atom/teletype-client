@@ -15,12 +15,23 @@ message Portal {
 message TextEditor {
   uint32 id = 1;
   uint32 text_buffer_id = 2;
+  map<uint32, MarkerLayer> selection_marker_layers_by_site_id = 3;
 }
 
 message TextBuffer {
   uint32 id = 1;
   string uri = 2;
   repeated Operation operations = 3;
+}
+
+message Marker {
+  uint32 id = 1;
+  RemotePosition start = 2;
+  RemotePosition end = 3;
+}
+
+message MarkerLayer {
+  repeated Marker markers = 1;
 }
 
 message RouterMessage {
