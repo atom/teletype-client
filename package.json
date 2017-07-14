@@ -5,7 +5,7 @@
   "main": "lib/real-time-client.js",
   "scripts": {
     "test": "electron-mocha **/*.test.js --ui=tdd --renderer",
-    "compile-protobuf": "protoc --js_out=import_style=commonjs,binary:lib real-time.proto"
+    "compile-protobuf": "protoc --js_out=import_style=commonjs,binary:lib real-time.proto tachyon.proto"
   },
   "author": "",
   "license": "MIT",
