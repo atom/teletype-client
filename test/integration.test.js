@@ -85,14 +85,13 @@ suite('Client Integration', () => {
     assert.equal(guestClientBuffer.uri, 'uri-1')
     assert.equal(guestBuffer.getText(), 'hello world')
 
-    return
-
     hostClientBuffer.apply(hostBuffer.insert({row: 0, column: 5}, ' cruel'))
     guestClientBuffer.apply(guestBuffer.delete({row: 0, column: 0}, {row: 0, column: 5}))
     guestClientBuffer.apply(guestBuffer.insert({row: 0, column: 0}, 'goodbye'))
 
     await condition(() => hostBuffer.text === 'goodbye cruel world')
     await condition(() => guestBuffer.text === 'goodbye cruel world')
+    return
 
     hostClientEditor.setSelectionRanges({
       1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}

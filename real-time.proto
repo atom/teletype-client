@@ -24,6 +24,10 @@ message TextBuffer {
   repeated Operation operations = 3;
 }
 
+message TextBufferUpdate {
+  repeated Operation operations = 1;
+}
+
 message Marker {
   uint32 id = 1;
   RemotePosition start = 2;
