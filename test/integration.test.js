@@ -42,7 +42,7 @@ suite('Client Integration', () => {
     }
   })
 
-  test.only('sharing a portal and performing basic collaboration with a guest', async () => {
+  test('sharing a portal and performing basic collaboration with a guest', async () => {
     const host = await buildClient()
     const guest = await buildClient()
 
@@ -110,32 +110,29 @@ suite('Client Integration', () => {
   })
 
   test('switching a portal\'s active editor', async () => {
-    const host = buildClient()
-    const guest = buildClient()
+    const host = await buildClient()
+    const guest = await buildClient()
 
     const hostPortal = await host.createPortal()
-    const hostSharedBuffer1 = await hostPortal.createSharedBuffer({uri: 'buffer-a', text: ''})
-    const hostSharedEditor1 = await hostPortal.createSharedEditor({
-      sharedBuffer: hostSharedBuffer1,
-      selectionRanges: {}
-    })
-    await hostPortal.setActiveSharedEditor(hostSharedEditor1)
+    const hostBuffer1 = await hostPortal.createTextBuffer({uri: 'buffer-a', text: ''})
+    const hostEditor1 = await hostPortal.createTextEditor({textBuffer: hostBuffer1, selectionRanges: {}})
+    hostPortal.setActiveTextEditor(hostEditor1)
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
-    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'buffer-a')
+    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'buffer-a')
+    const guestEditor1 = guestPortalDelegate.getActiveTextEditor()
 
-    const hostSharedBuffer2 = await hostPortal.createSharedBuffer({uri: 'buffer-b', text: ''})
-    const hostSharedEditor2 = await hostPortal.createSharedEditor({
-      sharedBuffer: hostSharedBuffer2,
-      selectionRanges: {}
-    })
-    await hostPortal.setActiveSharedEditor(hostSharedEditor2)
-    await condition(() => guestPortalDelegate.getActiveBufferURI() === 'buffer-b')
+    const hostBuffer2 = await hostPortal.createTextBuffer({uri: 'buffer-b', text: ''})
+    const hostEditor2 = await hostPortal.createTextEditor({textBuffer: hostBuffer2, selectionRanges: {}})
+    hostPortal.setActiveTextEditor(hostEditor2)
+    await condition(() => guestPortalDelegate.getActiveTextBufferURI() === 'buffer-b')
+    const guestEditor2 = guestPortalDelegate.getActiveTextEditor()
 
-    await hostPortal.setActiveSharedEditor(hostSharedEditor1)
-    await condition(() => guestPortalDelegate.getActiveBufferURI() === 'buffer-a')
+    hostPortal.setActiveTextEditor(hostEditor1)
+    await condition(() => guestPortalDelegate.getActiveTextBufferURI() === 'buffer-a')
+    assert.equal(guestPortalDelegate.getActiveTextEditor(), guestEditor1)
   })
 
   test('closing a portal\'s active editor', async () => {

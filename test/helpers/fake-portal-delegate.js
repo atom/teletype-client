@@ -12,15 +12,15 @@ class FakePortalDelegate {
     return this.hostDisconnected
   }
 
-  setActiveTextEditor (editor) {
-    this.editor = editor
+  setActiveTextEditor (textEditor) {
+    this.textEditor = textEditor
   }
 
   getActiveTextEditor () {
-    return this.editor
+    return this.textEditor
   }
 
   getActiveTextBufferURI () {
-    return (this.editor) ? this.editor.buffer.uri : null
+    return (this.textEditor) ? this.textEditor.textBuffer.uri : null
   }
 }
