@@ -91,7 +91,6 @@ suite('Client Integration', () => {
 
     await condition(() => hostBuffer.text === 'goodbye cruel world')
     await condition(() => guestBuffer.text === 'goodbye cruel world')
-    return
 
     hostClientEditor.setSelectionRanges({
       1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}

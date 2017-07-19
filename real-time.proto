@@ -18,6 +18,11 @@ message TextEditor {
   map<uint32, MarkerLayer> selection_marker_layers_by_site_id = 3;
 }
 
+message TextEditorUpdate {
+  uint32 selection_marker_layer_site_id = 1;
+  MarkerLayer selection_marker_layer = 2;
+}
+
 message TextBuffer {
   uint32 id = 1;
   string uri = 2;
