@@ -136,31 +136,28 @@ suite('Client Integration', () => {
   })
 
   test('closing a portal\'s active editor', async () => {
-    const host = buildClient()
-    const guest = buildClient()
+    const host = await buildClient()
+    const guest = await buildClient()
 
     const hostPortal = await host.createPortal()
-    const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
-    const hostSharedEditor = await hostPortal.createSharedEditor({
-      sharedBuffer: hostSharedBuffer,
-      selectionRanges: {}
-    })
+    const hostBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: ''})
+    const hostEditor = await hostPortal.createTextEditor({textBuffer: hostBuffer, selectionRanges: {}})
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
-    assert(guestPortalDelegate.getActiveSharedEditor() === null)
+    assert(guestPortalDelegate.getActiveTextEditor() === null)
 
-    await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guestPortalDelegate.getActiveSharedEditor() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
+    await hostPortal.setActiveTextEditor(hostEditor)
+    await condition(() => guestPortalDelegate.getActiveTextEditor() != null)
+    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
 
-    await hostPortal.setActiveSharedEditor(null)
-    await condition(() => guestPortalDelegate.getActiveSharedEditor() == null)
+    await hostPortal.setActiveTextEditor(null)
+    await condition(() => guestPortalDelegate.getActiveTextEditor() == null)
 
-    await hostPortal.setActiveSharedEditor(hostSharedEditor)
-    await condition(() => guestPortalDelegate.getActiveSharedEditor() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferURI(), 'some-buffer')
+    await hostPortal.setActiveTextEditor(hostEditor)
+    await condition(() => guestPortalDelegate.getActiveTextEditor() != null)
+    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
   })
 
   suite('heartbeat', () => {
