@@ -8,8 +8,9 @@ message PortalSubscriptionResponse {
   TextBuffer active_text_buffer = 3;
 }
 
-message Portal {
+message PortalUpdate {
   uint32 active_text_editor_id = 1;
+  uint32 active_text_buffer_id = 2;
 }
 
 message TextEditor {
