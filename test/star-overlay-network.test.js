@@ -22,7 +22,7 @@ suite('StarOverlayNetwork', () => {
     return server.reset()
   })
 
-  test.only('membership', async () => {
+  test('membership', async () => {
     const hubPool = await buildPeerPool('hub', server)
     const spoke1Pool = await buildPeerPool('spoke-1', server)
     const spoke2Pool = await buildPeerPool('spoke-2', server)
@@ -107,9 +107,8 @@ suite('StarOverlayNetwork', () => {
       const hub = buildStarNetwork('network-a', hubPool, true)
       const spoke1 = buildStarNetwork('network-a', spoke1Pool, false)
       const spoke2 = buildStarNetwork('network-a', spoke2Pool, false)
-      spoke1.connectTo('hub')
-      spoke2.connectTo('hub')
-      await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
+      await spoke1.connectTo('hub')
+      await spoke2.connectTo('hub')
 
       spoke1.unicast('spoke-2', 'spoke-to-spoke')
       spoke2.unicast('hub', 'spoke-to-hub')
@@ -154,23 +153,20 @@ suite('StarOverlayNetwork', () => {
       const hubA = buildStarNetwork('network-a', peer1Pool, true)
       const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
       const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
-      spokeA1.connectTo('peer-1')
-      spokeA2.connectTo('peer-1')
-      await condition(() => hubA.hasMember('peer-2') && hubA.hasMember('peer-3'))
+      await spokeA1.connectTo('peer-1')
+      await spokeA2.connectTo('peer-1')
 
       const hubB = buildStarNetwork('network-b', peer1Pool, true)
       const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
       const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
-      spokeB1.connectTo('peer-1')
-      spokeB2.connectTo('peer-1')
-      await condition(() => hubB.hasMember('peer-2') && hubB.hasMember('peer-3'))
+      await spokeB1.connectTo('peer-1')
+      await spokeB2.connectTo('peer-1')
 
       const hubC = buildStarNetwork('network-c', peer2Pool, true)
       const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
       const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
-      spokeC1.connectTo('peer-2')
-      spokeC2.connectTo('peer-2')
-      await condition(() => hubC.hasMember('peer-1') && hubC.hasMember('peer-3'))
+      await spokeC1.connectTo('peer-2')
+      await spokeC2.connectTo('peer-2')
 
       hubA.broadcast('a1')
       spokeA1.broadcast('a2')
@@ -212,11 +208,15 @@ suite('StarOverlayNetwork', () => {
       const hub = buildStarNetwork('some-network-id', hubPool, true)
       const spoke1 = buildStarNetwork('some-network-id', spoke1Pool, false)
       const spoke2 = buildStarNetwork('some-network-id', spoke2Pool, false)
-      spoke1.connectTo('hub')
-      spoke2.connectTo('hub')
-      await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
-
+      await spoke1.connectTo('hub')
+      await spoke2.connectTo('hub')
       await nonMemberPool.connectTo('hub')
+
+      // Clear peer pool inboxes to delete initial handshake messages.
+      hubPool.testInbox = []
+      spoke1Pool.testInbox = []
+      spoke2Pool.testInbox = []
+      nonMemberPool.testInbox = []
 
       spoke1.broadcast('hello')
       await condition(() => deepEqual(hub.testInbox, [{

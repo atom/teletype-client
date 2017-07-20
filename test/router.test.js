@@ -26,9 +26,8 @@ suite('Router', () => {
     const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), true)
     const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), false)
     const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), false)
-    spoke1.connectTo('hub')
-    spoke2.connectTo('hub')
-    await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
+    await spoke1.connectTo('hub')
+    await spoke2.connectTo('hub')
 
     const hubRouter = new Router(hub)
     const spoke1Router = new Router(spoke1)
@@ -60,9 +59,8 @@ suite('Router', () => {
     const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), true)
     const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), false)
     const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), false)
-    spoke1.connectTo('hub')
-    spoke2.connectTo('hub')
-    await condition(() => hub.hasMember('spoke-1') && hub.hasMember('spoke-2'))
+    await spoke1.connectTo('hub')
+    await spoke2.connectTo('hub')
 
     const spoke1Router = new Router(spoke1)
     const spoke2Router = new Router(spoke2)
