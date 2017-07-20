@@ -161,65 +161,55 @@ suite('Client Integration', () => {
   })
 
   suite('leaving, closing, or losing connection to a portal', () => {
-    const HEARTBEAT_INTERVAL_IN_MS = 10
-    const EVICTION_PERIOD_IN_MS = 2 * HEARTBEAT_INTERVAL_IN_MS
-
     let hostPortal, hostEditor
     let guest1Portal, guest1PortalDelegate, guest1Editor
     let guest2Portal, guest2PortalDelegate, guest2Editor
     let guest3Portal, guest3PortalDelegate, guest3Editor
 
-    suiteSetup(() => {
-      server.heartbeatService.setEvictionPeriod(EVICTION_PERIOD_IN_MS)
-    })
-
     setup(async () => {
-      const host = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      const host = await buildClient()
       hostPortal = await host.createPortal()
 
-      const guest1 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      const guest1 = await buildClient()
       guest1PortalDelegate = new FakePortalDelegate()
       guest1Portal = await guest1.joinPortal(hostPortal.id)
       guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest2 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      const guest2 = await buildClient()
       guest2PortalDelegate = new FakePortalDelegate()
       guest2Portal = await guest2.joinPortal(hostPortal.id)
       guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest3 = buildClient({heartbeatIntervalInMilliseconds: HEARTBEAT_INTERVAL_IN_MS})
+      const guest3 = await buildClient()
       guest3PortalDelegate = new FakePortalDelegate()
       guest3Portal = await guest3.joinPortal(hostPortal.id)
       guest3Portal.setDelegate(guest3PortalDelegate)
 
-      const hostSharedBuffer = await hostPortal.createSharedBuffer({uri: 'some-buffer', text: ''})
+      const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: ''})
       hostEditor = new Editor()
-      const hostSharedEditor = await hostPortal.createSharedEditor({
-        sharedBuffer: hostSharedBuffer,
-        selectionRanges: {}
-      })
-      hostSharedEditor.setDelegate(hostEditor)
-      await hostPortal.setActiveSharedEditor(hostSharedEditor)
+      const hostClientEditor = await hostPortal.createTextEditor({textBuffer: hostClientBuffer, selectionRanges: {}})
+      hostClientEditor.setDelegate(hostEditor)
+      await hostPortal.setActiveTextEditor(hostClientEditor)
       await condition(() =>
-        guest1PortalDelegate.getActiveSharedEditor() != null &&
-        guest2PortalDelegate.getActiveSharedEditor() != null &&
-        guest3PortalDelegate.getActiveSharedEditor() != null
+        guest1PortalDelegate.getActiveTextEditor() != null &&
+        guest2PortalDelegate.getActiveTextEditor() != null &&
+        guest3PortalDelegate.getActiveTextEditor() != null
       )
 
-      const guest1SharedEditor = guest1PortalDelegate.getActiveSharedEditor()
+      const guest1ClientEditor = guest1PortalDelegate.getActiveTextEditor()
       guest1Editor = new Editor()
-      guest1SharedEditor.setDelegate(guest1Editor)
-      guest1SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest1ClientEditor.setDelegate(guest1Editor)
+      guest1ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
-      const guest2SharedEditor = guest2PortalDelegate.getActiveSharedEditor()
+      const guest2ClientEditor = guest2PortalDelegate.getActiveTextEditor()
       guest2Editor = new Editor()
-      guest2SharedEditor.setDelegate(guest2Editor)
-      guest2SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest2ClientEditor.setDelegate(guest2Editor)
+      guest2ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
-      const guest3SharedEditor = guest3PortalDelegate.getActiveSharedEditor()
+      const guest3ClientEditor = guest3PortalDelegate.getActiveTextEditor()
       guest3Editor = new Editor()
-      guest3SharedEditor.setDelegate(guest3Editor)
-      guest3SharedEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest3ClientEditor.setDelegate(guest3Editor)
+      guest3ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
 
       await condition(() =>
         hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
@@ -228,7 +218,7 @@ suite('Client Integration', () => {
       )
     })
 
-    test('guest leaving a portal', async () => {
+    test.only('guest leaving a portal', async () => {
       guest1Portal.leave()
       await condition(() =>
         hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
