@@ -8,6 +8,12 @@ async function buildPeerPool (peerId, server) {
     pubSubGateway: server.pubSubGateway,
   })
   await peerPool.initialize()
+
+  peerPool.testDisconnectionEvents = []
+  peerPool.onDisconnection(({peerId}) => {
+    peerPool.testDisconnectionEvents.push(peerId)
+  })
+
   peerPool.testInbox = []
   peerPool.onReceive(({senderId, message}) => {
     peerPool.testInbox.push({
