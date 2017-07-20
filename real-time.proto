@@ -75,22 +75,20 @@ message NetworkMessage {
     StarConnection star_connection = 2;
     StarConnectionAck star_connection_ack = 3;
     StarDisconnection star_disconnection = 4;
-    StarConnectionEcho star_connection_echo = 5;
-    StarUnicast star_unicast = 6;
-    StarBroadcast star_broadcast = 7;
+    StarUnicast star_unicast = 5;
+    StarBroadcast star_broadcast = 6;
   }
 
-  message StarConnection {}
+  message StarConnection {
+    string sender_id = 1;
+  }
 
   message StarConnectionAck {
     repeated string member_ids = 1;
   }
 
-  message StarDisconnection {}
-
-  message StarConnectionEcho {
-    string status = 1;
-    string peer_id = 2;
+  message StarDisconnection {
+    string sender_id = 1;
   }
 
   message StarUnicast {
