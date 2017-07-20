@@ -9,8 +9,19 @@ message PortalSubscriptionResponse {
 }
 
 message PortalUpdate {
-  uint32 active_text_editor_id = 1;
-  uint32 active_text_buffer_id = 2;
+  oneof variant {
+    TextEditorSwitch text_editor_switch = 1;
+    SiteDisconnection site_disconnection = 2;
+  }
+
+  message TextEditorSwitch {
+    uint32 text_editor_id = 1;
+    uint32 text_buffer_id = 2;
+  }
+
+  message SiteDisconnection {
+    uint32 site_id = 1;
+  }
 }
 
 message TextEditor {
