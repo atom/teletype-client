@@ -73,11 +73,22 @@ message NetworkMessage {
 
   oneof variant {
     StarConnection star_connection = 2;
-    StarUnicast star_unicast = 3;
-    StarBroadcast star_broadcast = 4;
+    StarConnectionAck star_connection_ack = 3;
+    StarConnectionEcho star_connection_echo = 4;
+    StarUnicast star_unicast = 5;
+    StarBroadcast star_broadcast = 6;
   }
 
   message StarConnection {}
+
+  message StarConnectionAck {
+    repeated string member_ids = 1;
+  }
+
+  message StarConnectionEcho {
+    string status = 1;
+    string peer_id = 2;
+  }
 
   message StarUnicast {
     string sender_id = 1;

@@ -2,6 +2,7 @@ require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
+const setEqual = require('./helpers/set-equal')
 const condition = require('./helpers/condition')
 const buildPeerPool = require('./helpers/build-peer-pool')
 const buildStarNetwork = require('./helpers/build-star-network')
@@ -19,6 +20,58 @@ suite('StarOverlayNetwork', () => {
 
   setup(() => {
     return server.reset()
+  })
+
+  test.only('membership', async () => {
+    const hubPool = await buildPeerPool('hub', server)
+    const spoke1Pool = await buildPeerPool('spoke-1', server)
+    const spoke2Pool = await buildPeerPool('spoke-2', server)
+    const spoke3Pool = await buildPeerPool('spoke-3', server)
+
+    const hub = buildStarNetwork('network', hubPool, true)
+    assert.deepEqual(hub.getMembers(), new Set(['hub']))
+
+    const spoke1 = buildStarNetwork('network', spoke1Pool, false)
+    assert.deepEqual(spoke1.getMembers(), new Set(['spoke-1']))
+
+    const spoke2 = buildStarNetwork('network', spoke2Pool, false)
+    assert.deepEqual(spoke2.getMembers(), new Set(['spoke-2']))
+
+    const spoke3 = buildStarNetwork('network', spoke3Pool, false)
+    assert.deepEqual(spoke3.getMembers(), new Set(['spoke-3']))
+
+    spoke1.connectTo('hub')
+    await condition(() => (
+      setEqual(hub.getMembers(), ['hub', 'spoke-1']) &&
+      setEqual(spoke1.getMembers(), ['hub', 'spoke-1'])
+    ))
+    assert.deepEqual(hub.testJoinEvents, ['spoke-1'])
+    assert.deepEqual(spoke1.testJoinEvents, [])
+    assert.deepEqual(spoke2.testJoinEvents, [])
+    assert.deepEqual(spoke3.testJoinEvents, [])
+
+    spoke2.connectTo('hub')
+    await condition(() => (
+      setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-2']) &&
+      setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-2']) &&
+      setEqual(spoke2.getMembers(), ['hub', 'spoke-1', 'spoke-2'])
+    ))
+    assert.deepEqual(hub.testJoinEvents, ['spoke-1', 'spoke-2'])
+    assert.deepEqual(spoke1.testJoinEvents, ['spoke-2'])
+    assert.deepEqual(spoke2.testJoinEvents, [])
+    assert.deepEqual(spoke3.testJoinEvents, [])
+
+    spoke3.connectTo('hub')
+    await condition(() => (
+      setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+      setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+      setEqual(spoke2.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+      setEqual(spoke3.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3'])
+    ))
+    assert.deepEqual(hub.testJoinEvents, ['spoke-1', 'spoke-2', 'spoke-3'])
+    assert.deepEqual(spoke1.testJoinEvents, ['spoke-2', 'spoke-3'])
+    assert.deepEqual(spoke2.testJoinEvents, ['spoke-3'])
+    assert.deepEqual(spoke3.testJoinEvents, [])
   })
 
   suite('unicast', () => {
