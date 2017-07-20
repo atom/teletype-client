@@ -72,6 +72,30 @@ suite('StarOverlayNetwork', () => {
     assert.deepEqual(spoke1.testJoinEvents, ['spoke-2', 'spoke-3'])
     assert.deepEqual(spoke2.testJoinEvents, ['spoke-3'])
     assert.deepEqual(spoke3.testJoinEvents, [])
+
+    spoke2.disconnect()
+    await condition(() => (
+      setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-3']) &&
+      setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-3']) &&
+      setEqual(spoke2.getMembers(), ['spoke-2']) &&
+      setEqual(spoke3.getMembers(), ['hub', 'spoke-1', 'spoke-3'])
+    ))
+    assert.deepEqual(hub.testLeaveEvents, ['spoke-2'])
+    assert.deepEqual(spoke1.testLeaveEvents, ['spoke-2'])
+    assert.deepEqual(spoke2.testLeaveEvents, [])
+    assert.deepEqual(spoke3.testLeaveEvents, ['spoke-2'])
+
+    hub.disconnect()
+    await condition(() => (
+      setEqual(hub.getMembers(), ['hub']) &&
+      setEqual(spoke1.getMembers(), ['spoke-1']) &&
+      setEqual(spoke2.getMembers(), ['spoke-2']) &&
+      setEqual(spoke3.getMembers(), ['spoke-3'])
+    ))
+    assert.deepEqual(hub.testLeaveEvents, ['spoke-2'])
+    assert.deepEqual(spoke1.testLeaveEvents, ['spoke-2', 'hub'])
+    assert.deepEqual(spoke2.testLeaveEvents, [])
+    assert.deepEqual(spoke3.testLeaveEvents, ['spoke-2', 'hub'])
   })
 
   suite('unicast', () => {

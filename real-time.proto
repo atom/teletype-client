@@ -74,9 +74,10 @@ message NetworkMessage {
   oneof variant {
     StarConnection star_connection = 2;
     StarConnectionAck star_connection_ack = 3;
-    StarConnectionEcho star_connection_echo = 4;
-    StarUnicast star_unicast = 5;
-    StarBroadcast star_broadcast = 6;
+    StarDisconnection star_disconnection = 4;
+    StarConnectionEcho star_connection_echo = 5;
+    StarUnicast star_unicast = 6;
+    StarBroadcast star_broadcast = 7;
   }
 
   message StarConnection {}
@@ -84,6 +85,8 @@ message NetworkMessage {
   message StarConnectionAck {
     repeated string member_ids = 1;
   }
+
+  message StarDisconnection {}
 
   message StarConnectionEcho {
     string status = 1;
