@@ -58,7 +58,7 @@ suite('PeerPool', () => {
       peer3Pool.isConnectedToPeer('1') && !peer3Pool.isConnectedToPeer('2')
     ))
     assert.deepEqual(peer1Pool.testDisconnectionEvents, [])
-    assert.deepEqual(peer2Pool.testDisconnectionEvents, [])
+    assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2'])
 
     peer3Pool.disconnect()
@@ -67,7 +67,7 @@ suite('PeerPool', () => {
       !peer3Pool.isConnectedToPeer('1')
     ))
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['3'])
-    assert.deepEqual(peer2Pool.testDisconnectionEvents, [])
-    assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2'])
+    assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
+    assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
   })
 })
