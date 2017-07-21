@@ -277,11 +277,10 @@ suite('Client Integration', () => {
     })
   })
 
-  async function buildClient ({heartbeatIntervalInMilliseconds}={}) {
+  async function buildClient () {
     const client = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
-      heartbeatIntervalInMilliseconds,
       didCreateOrJoinPortal: (portal) => portals.push(portal)
     })
     await client.initialize()
