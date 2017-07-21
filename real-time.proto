@@ -101,6 +101,7 @@ message NetworkMessage {
 
   message StarDisconnection {
     string sender_id = 1;
+    bool connection_lost = 2;
   }
 
   message StarUnicast {

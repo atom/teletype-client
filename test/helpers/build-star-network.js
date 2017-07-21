@@ -8,7 +8,7 @@ function buildStarNetwork (id, peerPool, isHub) {
   network.onPeerJoin(({peerId}) => network.testJoinEvents.push(peerId))
 
   network.testLeaveEvents = []
-  network.onPeerLeave(({peerId}) => network.testLeaveEvents.push(peerId))
+  network.onPeerLeave(({peerId, connectionLost}) => network.testLeaveEvents.push({peerId, connectionLost}))
 
   network.testInbox = []
   network.onReceive(({senderId, message}) => {
