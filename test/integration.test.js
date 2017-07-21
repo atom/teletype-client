@@ -248,12 +248,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to guest', async () => {
-      await guest1Portal.simulateNetworkFailure()
-      await condition(async () => deepEqual(
-        await server.heartbeatService.findDeadSites(),
-        [{portalId: guest1Portal.id, id: guest1Portal.siteId}]
-      ), 'Expected to find one dead site: Guest 1')
-      server.heartbeatService.evictDeadSites()
+      guest1Portal.simulateNetworkFailure()
       await condition(() =>
         hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
         guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
@@ -264,13 +259,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to host', async () => {
-      await hostPortal.simulateNetworkFailure()
-      await condition(async () => deepEqual(
-        await server.heartbeatService.findDeadSites(),
-        [{portalId: hostPortal.id, id: hostPortal.siteId}]
-      ), 'Expected to find one dead site: Host')
-      assert(!guest1PortalDelegate.hasHostLostConnection() && !guest2PortalDelegate.hasHostLostConnection() && !guest3PortalDelegate.hasHostLostConnection())
-      server.heartbeatService.evictDeadSites()
+      hostPortal.simulateNetworkFailure()
       await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
       assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
