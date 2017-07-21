@@ -218,8 +218,8 @@ suite('Client Integration', () => {
       )
     })
 
-    test.only('guest leaving a portal', async () => {
-      guest1Portal.leave()
+    test('guest leaving a portal', async () => {
+      guest1Portal.dispose()
       await condition(() =>
         hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
         guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
@@ -231,7 +231,7 @@ suite('Client Integration', () => {
 
     test('host closing a portal', async () => {
       assert(!guest1PortalDelegate.hasHostClosedPortal() && !guest2PortalDelegate.hasHostClosedPortal() && !guest3PortalDelegate.hasHostClosedPortal())
-      hostPortal.close()
+      hostPortal.dispose()
       await condition(() => guest1PortalDelegate.hasHostClosedPortal() && guest2PortalDelegate.hasHostClosedPortal() && guest3PortalDelegate.hasHostClosedPortal())
 
       assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))

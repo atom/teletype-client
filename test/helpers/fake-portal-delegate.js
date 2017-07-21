@@ -1,15 +1,24 @@
 module.exports =
 class FakePortalDelegate {
   constructor () {
-    this.hostDisconnected = false
+    this.hostClosedPortal = false
+    this.hostLostConnection = false
   }
 
-  hostDidDisconnect () {
-    this.hostDisconnected = true
+  hostDidClosePortal () {
+    this.hostClosedPortal = true
   }
 
-  hasHostDisconnected () {
-    return this.hostDisconnected
+  hasHostClosedPortal () {
+    return this.hostClosedPortal
+  }
+
+  hostDidLoseConnection () {
+    this.hostLostConnection = true
+  }
+
+  hasHostLostConnection () {
+    return this.hostLostConnection
   }
 
   setActiveTextEditor (textEditor) {
