@@ -3,7 +3,7 @@ syntax = "proto3";
 import "tachyon.proto";
 
 message PortalSubscriptionResponse {
-  uint32 site_id = 1;
+  map<string, uint32> site_ids_by_peer_id = 1;
   TextEditor active_text_editor = 2;
   TextBuffer active_text_buffer = 3;
 }
@@ -11,7 +11,7 @@ message PortalSubscriptionResponse {
 message PortalUpdate {
   oneof variant {
     TextEditorSwitch text_editor_switch = 1;
-    SiteDisconnection site_disconnection = 2;
+    SiteAssignment site_assignment = 2;
   }
 
   message TextEditorSwitch {
@@ -19,8 +19,9 @@ message PortalUpdate {
     uint32 text_buffer_id = 2;
   }
 
-  message SiteDisconnection {
-    uint32 site_id = 1;
+  message SiteAssignment {
+    string peer_id = 1;
+    uint32 site_id = 2;
   }
 }
 
