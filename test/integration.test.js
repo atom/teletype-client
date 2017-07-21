@@ -52,6 +52,7 @@ suite('Client Integration', () => {
     const hostBuffer = new Buffer('hello world', {didSetText: () => hostSetTextCallCount++})
     const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'uri-1', text: hostBuffer.text})
     hostClientBuffer.setDelegate(hostBuffer)
+    hostClientBuffer.apply(hostBuffer.insert({row: 0, column: 11}, '!'))
     assert.equal(hostSetTextCallCount, 0)
 
     const hostClientEditor = await hostPortal.createTextEditor({
@@ -83,14 +84,14 @@ suite('Client Integration', () => {
     const guestClientBuffer = guestClientEditor.textBuffer
     guestClientBuffer.setDelegate(guestBuffer)
     assert.equal(guestClientBuffer.uri, 'uri-1')
-    assert.equal(guestBuffer.getText(), 'hello world')
+    assert.equal(guestBuffer.getText(), 'hello world!')
 
     hostClientBuffer.apply(hostBuffer.insert({row: 0, column: 5}, ' cruel'))
     guestClientBuffer.apply(guestBuffer.delete({row: 0, column: 0}, {row: 0, column: 5}))
     guestClientBuffer.apply(guestBuffer.insert({row: 0, column: 0}, 'goodbye'))
 
-    await condition(() => hostBuffer.text === 'goodbye cruel world')
-    await condition(() => guestBuffer.text === 'goodbye cruel world')
+    await condition(() => hostBuffer.text === 'goodbye cruel world!')
+    await condition(() => guestBuffer.text === 'goodbye cruel world!')
 
     hostClientEditor.setSelectionRanges({
       1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
