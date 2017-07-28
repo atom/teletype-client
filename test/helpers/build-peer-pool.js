@@ -5,7 +5,7 @@ async function buildPeerPool (peerId, server) {
   const peerPool = new PeerPool({
     peerId,
     restGateway: server.restGateway,
-    pubSubGateway: server.pubSubGateway,
+    pubSubGateway: server.pubSubGateway.buildClient(),
   })
   await peerPool.initialize()
 

@@ -42,7 +42,7 @@ suite('Client Integration', () => {
     }
   })
 
-  test('sharing a portal and performing basic collaboration with a guest', async () => {
+  test.only('sharing a portal and performing basic collaboration with a guest', async () => {
     const host = await buildClient()
     const guest = await buildClient()
 
@@ -278,9 +278,13 @@ suite('Client Integration', () => {
   })
 
   async function buildClient () {
+    const pubSubGateway = server.pubSubGateway
+      ? server.pubSubGateway.buildClient()
+      : new PusherPubSubGateway(server.pusherCredentials)
+
     const client = new Client({
       restGateway: server.restGateway,
-      pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
+      pubSubGateway,
       didCreateOrJoinPortal: (portal) => portals.push(portal)
     })
     await client.initialize()
