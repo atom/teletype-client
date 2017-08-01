@@ -21,15 +21,15 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  setActiveSharedEditor (sharedEditor) {
-    this.sharedEditor = sharedEditor
+  setActiveTextEditor (textEditor) {
+    this.textEditor = textEditor
   }
 
-  getActiveSharedEditor () {
-    return this.sharedEditor
+  getActiveTextEditor () {
+    return this.textEditor
   }
 
-  getActiveBufferURI () {
-    return (this.sharedEditor) ? this.sharedEditor.sharedBuffer.uri : null
+  getActiveTextBufferURI () {
+    return (this.textEditor) ? this.textEditor.textBuffer.uri : null
   }
 }

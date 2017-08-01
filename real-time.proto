@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+import "tachyon.proto";
+
+message PortalSubscriptionResponse {
+  map<string, uint32> site_ids_by_peer_id = 1;
+  TextEditor active_text_editor = 2;
+  TextBuffer active_text_buffer = 3;
+}
+
+message PortalUpdate {
+  oneof variant {
+    TextEditorSwitch text_editor_switch = 1;
+    SiteAssignment site_assignment = 2;
+  }
+
+  message TextEditorSwitch {
+    uint32 text_editor_id = 1;
+    uint32 text_buffer_id = 2;
+  }
+
+  message SiteAssignment {
+    string peer_id = 1;
+    uint32 site_id = 2;
+  }
+}
+
+message TextEditor {
+  uint32 id = 1;
+  uint32 text_buffer_id = 2;
+  map<uint32, MarkerLayer> selection_marker_layers_by_site_id = 3;
+}
+
+message TextEditorUpdate {
+  uint32 selection_marker_layer_site_id = 1;
+  MarkerLayer selection_marker_layer = 2;
+}
+
+message TextBuffer {
+  uint32 id = 1;
+  string uri = 2;
+  repeated Operation operations = 3;
+}
+
+message TextBufferUpdate {
+  repeated Operation operations = 1;
+}
+
+message Marker {
+  uint32 id = 1;
+  RemotePosition start = 2;
+  RemotePosition end = 3;
+}
+
+message MarkerLayer {
+  repeated Marker markers = 1;
+}
+
+message RouterMessage {
+  oneof variant {
+    Notification notification = 2;
+    Request request = 3;
+    Response response = 4;
+  }
+
+  message Notification {
+    string channel_id = 1;
+    bytes body = 2;
+  }
+
+  message Request {
+    string channel_id = 1;
+    uint32 request_id = 2;
+    bytes body = 3;
+  }
+
+  message Response {
+    uint32 request_id = 1;
+    bytes body = 2;
+  }
+}
+
+message NetworkMessage {
+  string network_id = 1;
+
+  oneof variant {
+    StarConnection star_connection = 2;
+    StarConnectionAck star_connection_ack = 3;
+    StarDisconnection star_disconnection = 4;
+    StarUnicast star_unicast = 5;
+    StarBroadcast star_broadcast = 6;
+  }
+
+  message StarConnection {
+    string sender_id = 1;
+  }
+
+  message StarConnectionAck {
+    repeated string member_ids = 1;
+  }
+
+  message StarDisconnection {
+    string sender_id = 1;
+    bool connection_lost = 2;
+  }
+
+  message StarUnicast {
+    string sender_id = 1;
+    string recipient_id = 2;
+    bytes body = 3;
+  }
+
+  message StarBroadcast {
+    string sender_id = 1;
+    bytes body = 2;
+  }
+}
