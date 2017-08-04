@@ -28,11 +28,11 @@ suite('PeerPool', () => {
     // Connection
     peer1Pool.connectTo('3')
     peer2Pool.connectTo('3')
-    await condition(() => (
-      peer1Pool.isConnectedToPeer('3') &&
-      peer2Pool.isConnectedToPeer('3') &&
-      peer3Pool.isConnectedToPeer('1') && peer3Pool.isConnectedToPeer('2')
-    ))
+
+    await peer1Pool.getConnectedPromise('3')
+    await peer2Pool.getConnectedPromise('3')
+    await peer3Pool.getConnectedPromise('1')
+    await peer3Pool.getConnectedPromise('2')
 
     // Single-part messages
     peer1Pool.send('3', Buffer.from('a'))
@@ -55,20 +55,15 @@ suite('PeerPool', () => {
 
     // Disconnection
     peer2Pool.disconnect()
-    await condition(() => (
-      peer1Pool.isConnectedToPeer('3') &&
-      !peer2Pool.isConnectedToPeer('3') &&
-      peer3Pool.isConnectedToPeer('1') && !peer3Pool.isConnectedToPeer('2')
-    ))
+    await peer2Pool.getDisconnectedPromise('3')
+    await peer3Pool.getDisconnectedPromise('2')
     assert.deepEqual(peer1Pool.testDisconnectionEvents, [])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2'])
 
     peer3Pool.disconnect()
-    await condition(() => (
-      !peer1Pool.isConnectedToPeer('3') &&
-      !peer3Pool.isConnectedToPeer('1')
-    ))
+    await peer1Pool.getDisconnectedPromise('3')
+    await peer3Pool.getDisconnectedPromise('1')
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
