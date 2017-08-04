@@ -4,7 +4,7 @@
   "description": "",
   "main": "lib/real-time-client.js",
   "scripts": {
-    "test": "electron-mocha **/*.test.js --ui=tdd --renderer",
+    "test": "electron-mocha **/*.test.js --ui=tdd --renderer --enable-experimental-web-platform-features",
     "compile-protobuf": "protoc --js_out=import_style=commonjs,binary:lib real-time.proto tachyon.proto"
   },
   "author": "",

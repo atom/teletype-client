@@ -21,5 +21,16 @@ async function buildPeerPool (peerId, server) {
       message: message.toString()
     })
   })
+
+  peerPool.testMediaTracks = {}
+  peerPool.onMediaTrack(({senderId, track}) => {
+    let tracksForSender = peerPool.testMediaTracks[senderId]
+    if (!tracksForSender) {
+      tracksForSender = {}
+      peerPool.testMediaTracks[senderId] = tracksForSender
+    }
+    tracksForSender[track.id] = track
+  })
+
   return peerPool
 }
