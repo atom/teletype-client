@@ -38,10 +38,13 @@ suite('PeerPool', () => {
     peer1Pool.send('3', Buffer.from('a'))
     peer2Pool.send('3', Buffer.from('b'))
 
-    await condition(() => deepEqual(peer3Pool.testInbox, [
-      {senderId: '1', message: 'a'},
-      {senderId: '2', message: 'b'}
-    ]))
+    await condition(() => {
+      peer3Pool.testInbox.sort((a, b) => a.senderId.localeCompare(b.senderId))
+      return deepEqual(peer3Pool.testInbox, [
+        {senderId: '1', message: 'a'},
+        {senderId: '2', message: 'b'}
+      ])
+    })
     peer3Pool.testInbox.length = 0
 
     // Multi-part messages
