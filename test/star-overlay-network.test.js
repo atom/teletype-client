@@ -6,6 +6,7 @@ const setEqual = require('./helpers/set-equal')
 const condition = require('./helpers/condition')
 const buildPeerPool = require('./helpers/build-peer-pool')
 const buildStarNetwork = require('./helpers/build-star-network')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
 suite('StarOverlayNetwork', () => {
   let server
@@ -298,6 +299,43 @@ suite('StarOverlayNetwork', () => {
       await condition(() => deepEqual(nonMemberPool.testInbox, [
         {senderId: 'hub', message: 'direct message'}
       ]))
+    })
+  })
+
+  suite('broadcastMediaTrack', () => {
+    test.only('streams the media track to all other members of the network', async () => {
+      const peer1Pool = await buildPeerPool('peer-1', server)
+      const peer2Pool = await buildPeerPool('peer-2', server)
+      const peer3Pool = await buildPeerPool('peer-3', server)
+      const peer4Pool = await buildPeerPool('peer-4', server)
+
+      const hubA = buildStarNetwork('network-a', peer1Pool, true)
+      const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
+      const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
+      await spokeA1.connectTo('peer-1')
+      await spokeA2.connectTo('peer-1')
+
+      // const hubB = buildStarNetwork('network-b', peer1Pool, true)
+      // const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
+      // const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
+      // await spokeB1.connectTo('peer-1')
+      // await spokeB2.connectTo('peer-1')
+      //
+      // const hubC = buildStarNetwork('network-c', peer2Pool, true)
+      // const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
+      // const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
+      // await spokeC1.connectTo('peer-2')
+      // await spokeC2.connectTo('peer-2')
+
+
+      const stream = await getExampleMediaStream()
+      const track0 = stream.getTracks()[0]
+      hubA.broadcastMediaTrack('some-metadata', track0, stream)
+      //
+      // await peer1Pool.getNextNegotiationCompletedPromise('peer-2')
+      // await peer1Pool.getNextNegotiationCompletedPromise('peer-3')
+
+      await new Promise(r => setTimeout(r, 2000))
     })
   })
 })
