@@ -303,39 +303,43 @@ suite('StarOverlayNetwork', () => {
   })
 
   suite('broadcastTrack', () => {
-    test.only('streams the media track to all other members of the network', async () => {
-      const peer1Pool = await buildPeerPool('peer-1', server)
-      const peer2Pool = await buildPeerPool('peer-2', server)
-      const peer3Pool = await buildPeerPool('peer-3', server)
-      const peer4Pool = await buildPeerPool('peer-4', server)
+    test('streams the media track to all other members of the network', async () => {
+      const hubPool = await buildPeerPool('peer-1', server)
+      const spoke1Pool = await buildPeerPool('peer-2', server)
+      const spoke2Pool = await buildPeerPool('peer-3', server)
 
-      const hubA = buildStarNetwork('network-a', peer1Pool, true)
-      const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
-      const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
-      await spokeA1.connectTo('peer-1')
-      await spokeA2.connectTo('peer-1')
+      const hub = buildStarNetwork('network-a', hubPool, true)
+      const spoke1 = buildStarNetwork('network-a', spoke1Pool, false)
+      const spoke2 = buildStarNetwork('network-a', spoke2Pool, false)
+      await spoke1.connectTo('peer-1')
+      await spoke2.connectTo('peer-1')
 
-      // const hubB = buildStarNetwork('network-b', peer1Pool, true)
-      // const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
-      // const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
-      // await spokeB1.connectTo('peer-1')
-      // await spokeB2.connectTo('peer-1')
-      //
-      // const hubC = buildStarNetwork('network-c', peer2Pool, true)
-      // const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
-      // const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
-      // await spokeC1.connectTo('peer-2')
-      // await spokeC2.connectTo('peer-2')
+      const streamA = await getExampleMediaStream()
+      const track0 = streamA.getTracks()[0]
+      const track1 = streamA.getTracks()[1]
+      hub.broadcastTrack('metadata-1', track0, streamA)
+      await hubPool.getNextNegotiationCompletedPromise('peer-2')
+      await hubPool.getNextNegotiationCompletedPromise('peer-3')
 
+      await condition(() => spoke1.testTracks[track0.id])
+      assert.equal(spoke1.testTracks[track0.id].metadata, 'metadata-1')
+      assert.equal(spoke1.testTracks[track0.id].senderId, 'peer-1')
 
-      const stream = await getExampleMediaStream()
-      const track0 = stream.getTracks()[0]
-      hubA.broadcastTrack('some-metadata', track0, stream)
-      //
-      // await peer1Pool.getNextNegotiationCompletedPromise('peer-2')
-      // await peer1Pool.getNextNegotiationCompletedPromise('peer-3')
+      await condition(() => spoke2.testTracks[track0.id])
+      assert.equal(spoke2.testTracks[track0.id].metadata, 'metadata-1')
+      assert.equal(spoke2.testTracks[track0.id].senderId, 'peer-1')
 
-      await new Promise(r => setTimeout(r, 2000))
+      spoke1.broadcastTrack('metadata-2', track1, streamA)
+      await spoke1Pool.getNextNegotiationCompletedPromise('peer-1')
+      await hubPool.getNextNegotiationCompletedPromise('peer-3')
+
+      await condition(() => hub.testTracks[track1.id])
+      assert.equal(hub.testTracks[track1.id].metadata, 'metadata-2')
+      assert.equal(hub.testTracks[track1.id].senderId, 'peer-2')
+
+      await condition(() => spoke2.testTracks[track1.id])
+      assert.equal(spoke2.testTracks[track1.id].metadata, 'metadata-2')
+      assert.equal(spoke2.testTracks[track1.id].senderId, 'peer-2')
     })
   })
 })
