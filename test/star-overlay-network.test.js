@@ -314,10 +314,10 @@ suite('StarOverlayNetwork', () => {
       await spoke1.connectTo('peer-1')
       await spoke2.connectTo('peer-1')
 
-      const streamA = await getExampleMediaStream()
-      const track0 = streamA.getTracks()[0]
-      const track1 = streamA.getTracks()[1]
-      hub.broadcastTrack('metadata-1', track0, streamA)
+      const stream = await getExampleMediaStream()
+      const track0 = stream.getTracks()[0]
+      const track1 = stream.getTracks()[1]
+      hub.broadcastTrack('metadata-1', track0, stream)
       await Promise.all([
         hubPool.getNextNegotiationCompletedPromise('peer-2'),
         hubPool.getNextNegotiationCompletedPromise('peer-3')
@@ -331,7 +331,7 @@ suite('StarOverlayNetwork', () => {
       assert.equal(spoke2.testTracks[track0.id].metadata, 'metadata-1')
       assert.equal(spoke2.testTracks[track0.id].senderId, 'peer-1')
 
-      spoke1.broadcastTrack('metadata-2', track1, streamA)
+      spoke1.broadcastTrack('metadata-2', track1, stream)
       await Promise.all([
         spoke1Pool.getNextNegotiationCompletedPromise('peer-1'),
         hubPool.getNextNegotiationCompletedPromise('peer-3')
@@ -344,6 +344,42 @@ suite('StarOverlayNetwork', () => {
       await condition(() => spoke2.testTracks[track1.id])
       assert.equal(spoke2.testTracks[track1.id].metadata, 'metadata-2')
       assert.equal(spoke2.testTracks[track1.id].senderId, 'peer-2')
+    })
+
+    test('immediately broadcasts the current media tracks to new joiners', async () => {
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
+
+      const hub = buildStarNetwork('network-a', hubPool, true)
+      const spoke1 = buildStarNetwork('network-a', spoke1Pool, false)
+      const spoke2 = buildStarNetwork('network-a', spoke2Pool, false)
+
+      const stream = await getExampleMediaStream()
+      const track0 = stream.getTracks()[0]
+      const track1 = stream.getTracks()[1]
+
+      hub.broadcastTrack('metadata-1', track0, stream)
+
+      await spoke1.connectTo('hub')
+      await hubPool.getNextNegotiationCompletedPromise('spoke-1')
+      await condition(() => spoke1.testTracks[track0.id])
+      assert.equal(spoke1.testTracks[track0.id].senderId, 'hub')
+      assert.equal(spoke1.testTracks[track0.id].metadata, 'metadata-1')
+
+      spoke1.broadcastTrack('metadata-2', track1, stream)
+      await spoke1Pool.getNextNegotiationCompletedPromise('hub')
+      await condition(() => hub.testTracks[track1.id])
+
+      spoke2.connectTo('hub')
+      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
+      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
+      await condition(() => spoke2.testTracks[track0.id])
+      assert.equal(spoke2.testTracks[track0.id].senderId, 'hub')
+      assert.equal(spoke2.testTracks[track0.id].metadata, 'metadata-1')
+      await condition(() => spoke2.testTracks[track1.id])
+      assert.equal(spoke2.testTracks[track1.id].senderId, 'spoke-1')
+      assert.equal(spoke2.testTracks[track1.id].metadata, 'metadata-2')
     })
   })
 })
