@@ -361,6 +361,7 @@ suite('StarOverlayNetwork', () => {
 
       hub.broadcastTrack('metadata-1', track0, stream)
 
+      // New spokes get tracks that the hub broadcasted previously
       await spoke1.connectTo('hub')
       await hubPool.getNextNegotiationCompletedPromise('spoke-1')
       await condition(() => spoke1.testTracks[track0.id])
@@ -371,8 +372,8 @@ suite('StarOverlayNetwork', () => {
       await spoke1Pool.getNextNegotiationCompletedPromise('hub')
       await condition(() => hub.testTracks[track1.id])
 
-      spoke2.connectTo('hub')
-      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
+      // New spokes get tracks that other spokes broadcasted previously
+      await spoke2.connectTo('hub')
       await hubPool.getNextNegotiationCompletedPromise('spoke-2')
       await condition(() => spoke2.testTracks[track0.id])
       assert.equal(spoke2.testTracks[track0.id].senderId, 'hub')
@@ -380,6 +381,24 @@ suite('StarOverlayNetwork', () => {
       await condition(() => spoke2.testTracks[track1.id])
       assert.equal(spoke2.testTracks[track1.id].senderId, 'spoke-1')
       assert.equal(spoke2.testTracks[track1.id].metadata, 'metadata-2')
+
+      // When tracks are stopped, it is propagated to the network
+      track1.stop()
+      await spoke1Pool.getNextNegotiationCompletedPromise('hub')
+      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
+
+      await condition(() => hub.testTracks[track1.id].track.readyState === 'ended')
+      await condition(() => spoke2.testTracks[track1.id].track.readyState === 'ended')
+
+      // New joiners don't receive stopped tracks
+      const spoke3Pool = await buildPeerPool('spoke-3', server)
+      const spoke3 = buildStarNetwork('network-a', spoke3Pool, false)
+      await spoke3.connectTo('hub')
+      await hubPool.getNextNegotiationCompletedPromise('spoke-3')
+
+      await condition(() => spoke3.testTracks[track0.id])
+      await new Promise((r) => setTimeout(r, 100))
+      assert(!spoke3.testTracks[track1.id])
     })
   })
 })
