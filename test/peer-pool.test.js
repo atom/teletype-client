@@ -83,13 +83,13 @@ suite('PeerPool', () => {
     await peer2Pool.getConnectedPromise('1')
 
     await condition(() =>
-      peer2Pool.testTracks['1'] && peer2Pool.testTracks['1'][track0.id]
+      peer2Pool.testTracks[track0.id]
     )
 
     peer1Pool.addTrack('2', track1, stream)
     await peer1Pool.getNextNegotiationCompletedPromise('2')
     await condition(() =>
-      peer2Pool.testTracks['1'][track1.id]
+      peer2Pool.testTracks[track1.id]
     )
 
     // Verify that renegotiation can be initiated by the party that didn't
@@ -100,7 +100,7 @@ suite('PeerPool', () => {
     await peer3Pool.getNextNegotiationCompletedPromise('1')
 
     await condition(() =>
-      peer1Pool.testTracks['3'] && peer1Pool.testTracks['3'][track0.id]
+      peer1Pool.testTracks[track0.id]
     )
   })
 })

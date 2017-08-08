@@ -24,12 +24,7 @@ async function buildPeerPool (peerId, server) {
 
   peerPool.testTracks = {}
   peerPool.onTrack(({senderId, track}) => {
-    let tracksForSender = peerPool.testTracks[senderId]
-    if (!tracksForSender) {
-      tracksForSender = {}
-      peerPool.testTracks[senderId] = tracksForSender
-    }
-    tracksForSender[track.id] = track
+    peerPool.testTracks[track.id] = {senderId, track}
   })
 
   return peerPool
