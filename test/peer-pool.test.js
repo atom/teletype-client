@@ -78,29 +78,29 @@ suite('PeerPool', () => {
     const track0 = stream.getTracks()[0]
     const track1 = stream.getTracks()[1]
 
-    peer1Pool.addMediaTrack('2', track0, stream)
+    peer1Pool.addTrack('2', track0, stream)
     await peer1Pool.connectTo('2')
     await peer2Pool.getConnectedPromise('1')
 
     await condition(() =>
-      peer2Pool.testMediaTracks['1'] && peer2Pool.testMediaTracks['1'][track0.id]
+      peer2Pool.testTracks['1'] && peer2Pool.testTracks['1'][track0.id]
     )
 
-    peer1Pool.addMediaTrack('2', track1, stream)
+    peer1Pool.addTrack('2', track1, stream)
     await peer1Pool.getNextNegotiationCompletedPromise('2')
     await condition(() =>
-      peer2Pool.testMediaTracks['1'][track1.id]
+      peer2Pool.testTracks['1'][track1.id]
     )
 
     // Verify that renegotiation can be initiated by the party that didn't
     // initiate the original connection
     await peer1Pool.connectTo('3')
     await peer3Pool.getConnectedPromise('1')
-    peer3Pool.addMediaTrack('1', track0, stream)
+    peer3Pool.addTrack('1', track0, stream)
     await peer3Pool.getNextNegotiationCompletedPromise('1')
 
     await condition(() =>
-      peer1Pool.testMediaTracks['3'] && peer1Pool.testMediaTracks['3'][track0.id]
+      peer1Pool.testTracks['3'] && peer1Pool.testTracks['3'][track0.id]
     )
   })
 })

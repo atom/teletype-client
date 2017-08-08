@@ -302,7 +302,7 @@ suite('StarOverlayNetwork', () => {
     })
   })
 
-  suite('broadcastMediaTrack', () => {
+  suite('broadcastTrack', () => {
     test.only('streams the media track to all other members of the network', async () => {
       const peer1Pool = await buildPeerPool('peer-1', server)
       const peer2Pool = await buildPeerPool('peer-2', server)
@@ -330,7 +330,7 @@ suite('StarOverlayNetwork', () => {
 
       const stream = await getExampleMediaStream()
       const track0 = stream.getTracks()[0]
-      hubA.broadcastMediaTrack('some-metadata', track0, stream)
+      hubA.broadcastTrack('some-metadata', track0, stream)
       //
       // await peer1Pool.getNextNegotiationCompletedPromise('peer-2')
       // await peer1Pool.getNextNegotiationCompletedPromise('peer-3')

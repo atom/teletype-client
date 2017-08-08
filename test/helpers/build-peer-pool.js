@@ -22,12 +22,12 @@ async function buildPeerPool (peerId, server) {
     })
   })
 
-  peerPool.testMediaTracks = {}
-  peerPool.onMediaTrack(({senderId, track}) => {
-    let tracksForSender = peerPool.testMediaTracks[senderId]
+  peerPool.testTracks = {}
+  peerPool.onTrack(({senderId, track}) => {
+    let tracksForSender = peerPool.testTracks[senderId]
     if (!tracksForSender) {
       tracksForSender = {}
-      peerPool.testMediaTracks[senderId] = tracksForSender
+      peerPool.testTracks[senderId] = tracksForSender
     }
     tracksForSender[track.id] = track
   })

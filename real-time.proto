@@ -89,7 +89,7 @@ message NetworkMessage {
     StarDisconnection star_disconnection = 4;
     StarUnicast star_unicast = 5;
     StarBroadcast star_broadcast = 6;
-    StarMediaTrackBroadcast star_media_track_broadcast = 7;
+    StarTrackBroadcast star_media_track_broadcast = 7;
   }
 
   message StarConnection {
@@ -116,7 +116,7 @@ message NetworkMessage {
     bytes body = 2;
   }
 
-  message StarMediaTrackBroadcast {
+  message StarTrackBroadcast {
     string sender_id = 1;
     string track_id = 2;
     bytes metadata = 3;
