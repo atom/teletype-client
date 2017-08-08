@@ -80,6 +80,11 @@ message RouterMessage {
   }
 }
 
+message RouterTrackMetadata {
+  string channel_id = 1;
+  bytes application_metadata = 2;
+}
+
 message NetworkMessage {
   string network_id = 1;
 
@@ -89,7 +94,7 @@ message NetworkMessage {
     StarDisconnection star_disconnection = 4;
     StarUnicast star_unicast = 5;
     StarBroadcast star_broadcast = 6;
-    StarTrackBroadcast star_media_track_broadcast = 7;
+    StarTrackBroadcast star_track_broadcast = 7;
   }
 
   message StarConnection {

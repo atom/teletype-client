@@ -5,6 +5,7 @@ const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
 const buildPeerPool = require('./helpers/build-peer-pool')
 const buildStarNetwork = require('./helpers/build-star-network')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const Router = require('../lib/router')
 
 suite('Router', () => {
@@ -107,11 +108,62 @@ suite('Router', () => {
       await spoke1Router.request('spoke-2', 'channel-4', 'request from spoke 1 on channel 3')
     }
   })
+
+  test('track broadcast', async () => {
+    const hubPool = await buildPeerPool('hub', server)
+    const hub = buildStarNetwork('some-network-id', hubPool, true)
+    const spoke1Pool = await buildPeerPool('spoke-1', server)
+    const spoke1 = buildStarNetwork('some-network-id', spoke1Pool, false)
+    const spoke2Pool = await buildPeerPool('spoke-2', server)
+    const spoke2 = buildStarNetwork('some-network-id', spoke2Pool, false)
+    await spoke1.connectTo('hub')
+    await spoke2.connectTo('hub')
+
+    const hubRouter = new Router(hub)
+    const spoke1Router = new Router(spoke1)
+    const spoke2Router = new Router(spoke2)
+
+    recordTracks(hubRouter, ['channel-1'])
+    recordTracks(spoke1Router, ['channel-1', 'channel-2'])
+    recordTracks(spoke2Router, ['channel-1', 'channel-2'])
+
+    const stream = await getExampleMediaStream()
+    const track0 = stream.getTracks()[0]
+    const track1 = stream.getTracks()[1]
+
+    hubRouter.broadcastTrack('channel-1', 'metadata-1', track0, stream)
+    await Promise.all([
+      hubPool.getNextNegotiationCompletedPromise('spoke-1'),
+      hubPool.getNextNegotiationCompletedPromise('spoke-2'),
+      spoke1Pool.getNextNegotiationCompletedPromise('hub'),
+      spoke2Pool.getNextNegotiationCompletedPromise('hub')
+    ])
+
+    spoke1Router.broadcastTrack('channel-2', 'metadata-2', track1, stream)
+    await Promise.all([
+      hubPool.getNextNegotiationCompletedPromise('spoke-1'),
+      hubPool.getNextNegotiationCompletedPromise('spoke-2'),
+      spoke1Pool.getNextNegotiationCompletedPromise('hub'),
+      spoke2Pool.getNextNegotiationCompletedPromise('hub')
+    ])
+
+    await condition(() => spoke1Router.testTracks['channel-1'][track0.id])
+    await condition(() => spoke2Router.testTracks['channel-1'][track0.id])
+    assert.equal(spoke1Router.testTracks['channel-1'][track0.id].senderId, 'hub')
+    assert.equal(spoke1Router.testTracks['channel-1'][track0.id].metadata, 'metadata-1')
+    assert.equal(spoke2Router.testTracks['channel-1'][track0.id].senderId, 'hub')
+    assert.equal(spoke2Router.testTracks['channel-1'][track0.id].metadata, 'metadata-1')
+    assert(!hubRouter.testTracks['channel-1'][track0.id])
+
+    await condition(() => spoke2Router.testTracks['channel-2'][track1.id])
+    assert.equal(spoke2Router.testTracks['channel-2'][track1.id].senderId, 'spoke-1')
+    assert.equal(spoke2Router.testTracks['channel-2'][track1.id].metadata, 'metadata-2')
+    assert(!spoke1Router.testTracks['channel-2'][track1.id])
+    assert(!hubRouter.testTracks['channel-2'])
+  })
 })
 
 function recordNotifications (router, channelIds) {
-  const peerId = router.network.peerPool.peerId
-
   if (!router.testInbox) router.testInbox = {}
   channelIds.forEach((channelId) => {
     router.onNotification(channelId, ({senderId, message}) => {
@@ -120,6 +172,18 @@ function recordNotifications (router, channelIds) {
         senderId, message: message.toString()
       })
       router.testInbox[channelId].sort((a, b) => a.senderId.localeCompare(b.senderId))
+    })
+  })
+}
+
+function recordTracks (router, channelIds) {
+  if (!router.testTracks) router.testTracks = {}
+  channelIds.forEach((channelId) => {
+    router.testTracks[channelId] = {}
+    router.onTrack(channelId, ({senderId, metadata, track}) => {
+      router.testTracks[channelId][track.id] = {
+        senderId, metadata: metadata.toString(), track
+      }
     })
   })
 }
