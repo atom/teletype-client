@@ -103,4 +103,25 @@ suite('PeerPool', () => {
       peer1Pool.testTracks[track0.id]
     )
   })
+
+  test('initiating connection re-negotiation concurrently', async () => {
+    const peer1Pool = await buildPeerPool('1', server)
+    const peer2Pool = await buildPeerPool('2', server)
+
+    await peer1Pool.connectTo('2')
+    await peer2Pool.getConnectedPromise('1')
+
+    const stream = await getExampleMediaStream()
+    const track0 = stream.getTracks()[0]
+    const track1 = stream.getTracks()[1]
+
+    peer1Pool.addTrack('2', track0, stream)
+    peer2Pool.addTrack('1', track1, stream)
+
+    await peer1Pool.getNextNegotiationCompletedPromise('2')
+    await peer2Pool.getNextNegotiationCompletedPromise('1')
+
+    await condition(() => peer1Pool.testTracks[track1.id])
+    await condition(() => peer2Pool.testTracks[track0.id])
+  })
 })

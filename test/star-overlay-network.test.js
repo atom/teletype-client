@@ -318,8 +318,10 @@ suite('StarOverlayNetwork', () => {
       const track0 = streamA.getTracks()[0]
       const track1 = streamA.getTracks()[1]
       hub.broadcastTrack('metadata-1', track0, streamA)
-      await hubPool.getNextNegotiationCompletedPromise('peer-2')
-      await hubPool.getNextNegotiationCompletedPromise('peer-3')
+      await Promise.all([
+        hubPool.getNextNegotiationCompletedPromise('peer-2'),
+        hubPool.getNextNegotiationCompletedPromise('peer-3')
+      ])
 
       await condition(() => spoke1.testTracks[track0.id])
       assert.equal(spoke1.testTracks[track0.id].metadata, 'metadata-1')
@@ -330,8 +332,10 @@ suite('StarOverlayNetwork', () => {
       assert.equal(spoke2.testTracks[track0.id].senderId, 'peer-1')
 
       spoke1.broadcastTrack('metadata-2', track1, streamA)
-      await spoke1Pool.getNextNegotiationCompletedPromise('peer-1')
-      await hubPool.getNextNegotiationCompletedPromise('peer-3')
+      await Promise.all([
+        spoke1Pool.getNextNegotiationCompletedPromise('peer-1'),
+        hubPool.getNextNegotiationCompletedPromise('peer-3')
+      ])
 
       await condition(() => hub.testTracks[track1.id])
       assert.equal(hub.testTracks[track1.id].metadata, 'metadata-2')
