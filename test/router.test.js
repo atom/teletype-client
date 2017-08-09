@@ -3,7 +3,7 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const Router = require('../lib/router')
@@ -21,6 +21,10 @@ suite('Router', () => {
 
   setup(() => {
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   test('notifications', async () => {
@@ -132,20 +136,7 @@ suite('Router', () => {
     const track1 = stream.getTracks()[1]
 
     hubRouter.broadcastTrack('channel-1', 'metadata-1', track0, stream)
-    await Promise.all([
-      hubPool.getNextNegotiationCompletedPromise('spoke-1'),
-      hubPool.getNextNegotiationCompletedPromise('spoke-2'),
-      spoke1Pool.getNextNegotiationCompletedPromise('hub'),
-      spoke2Pool.getNextNegotiationCompletedPromise('hub')
-    ])
-
     spoke1Router.broadcastTrack('channel-2', 'metadata-2', track1, stream)
-    await Promise.all([
-      hubPool.getNextNegotiationCompletedPromise('spoke-1'),
-      hubPool.getNextNegotiationCompletedPromise('spoke-2'),
-      spoke1Pool.getNextNegotiationCompletedPromise('hub'),
-      spoke2Pool.getNextNegotiationCompletedPromise('hub')
-    ])
 
     await condition(() => spoke1Router.testTracks['channel-1'][track0.id])
     await condition(() => spoke2Router.testTracks['channel-1'][track0.id])

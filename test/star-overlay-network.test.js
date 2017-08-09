@@ -4,7 +4,7 @@ const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const setEqual = require('./helpers/set-equal')
 const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
@@ -21,6 +21,10 @@ suite('StarOverlayNetwork', () => {
 
   setup(() => {
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   suite('membership', async () => {
@@ -318,10 +322,6 @@ suite('StarOverlayNetwork', () => {
       const track0 = stream.getTracks()[0]
       const track1 = stream.getTracks()[1]
       hub.broadcastTrack('metadata-1', track0, stream)
-      await Promise.all([
-        hubPool.getNextNegotiationCompletedPromise('peer-2'),
-        hubPool.getNextNegotiationCompletedPromise('peer-3')
-      ])
 
       await condition(() => spoke1.testTracks[track0.id])
       assert.equal(spoke1.testTracks[track0.id].metadata, 'metadata-1')
@@ -332,15 +332,9 @@ suite('StarOverlayNetwork', () => {
       assert.equal(spoke2.testTracks[track0.id].senderId, 'peer-1')
 
       spoke1.broadcastTrack('metadata-2', track1, stream)
-      await Promise.all([
-        spoke1Pool.getNextNegotiationCompletedPromise('peer-1'),
-        hubPool.getNextNegotiationCompletedPromise('peer-3')
-      ])
-
       await condition(() => hub.testTracks[track1.id])
       assert.equal(hub.testTracks[track1.id].metadata, 'metadata-2')
       assert.equal(hub.testTracks[track1.id].senderId, 'peer-2')
-
       await condition(() => spoke2.testTracks[track1.id])
       assert.equal(spoke2.testTracks[track1.id].metadata, 'metadata-2')
       assert.equal(spoke2.testTracks[track1.id].senderId, 'peer-2')
@@ -363,18 +357,15 @@ suite('StarOverlayNetwork', () => {
 
       // New spokes get tracks that the hub broadcasted previously
       await spoke1.connectTo('hub')
-      await hubPool.getNextNegotiationCompletedPromise('spoke-1')
       await condition(() => spoke1.testTracks[track0.id])
       assert.equal(spoke1.testTracks[track0.id].senderId, 'hub')
       assert.equal(spoke1.testTracks[track0.id].metadata, 'metadata-1')
 
       spoke1.broadcastTrack('metadata-2', track1, stream)
-      await spoke1Pool.getNextNegotiationCompletedPromise('hub')
       await condition(() => hub.testTracks[track1.id])
 
       // New spokes get tracks that other spokes broadcasted previously
       await spoke2.connectTo('hub')
-      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
       await condition(() => spoke2.testTracks[track0.id])
       assert.equal(spoke2.testTracks[track0.id].senderId, 'hub')
       assert.equal(spoke2.testTracks[track0.id].metadata, 'metadata-1')
@@ -384,9 +375,6 @@ suite('StarOverlayNetwork', () => {
 
       // When tracks are stopped, it is propagated to the network
       track1.stop()
-      await spoke1Pool.getNextNegotiationCompletedPromise('hub')
-      await hubPool.getNextNegotiationCompletedPromise('spoke-2')
-
       await condition(() => hub.testTracks[track1.id].track.readyState === 'ended')
       await condition(() => spoke2.testTracks[track1.id].track.readyState === 'ended')
 
@@ -394,7 +382,6 @@ suite('StarOverlayNetwork', () => {
       const spoke3Pool = await buildPeerPool('spoke-3', server)
       const spoke3 = buildStarNetwork('network-a', spoke3Pool, false)
       await spoke3.connectTo('hub')
-      await hubPool.getNextNegotiationCompletedPromise('spoke-3')
 
       await condition(() => spoke3.testTracks[track0.id])
       await new Promise((r) => setTimeout(r, 100))

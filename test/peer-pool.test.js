@@ -3,7 +3,7 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
 suite('PeerPool', () => {
@@ -19,6 +19,10 @@ suite('PeerPool', () => {
 
   setup(() => {
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   test('connection and sending messages between peers', async () => {
@@ -70,7 +74,7 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
   })
 
-  test('streaming media tracks between peers', async function () {
+  test('streaming media tracks between peers', async () => {
     const peer1Pool = await buildPeerPool('1', server)
     const peer2Pool = await buildPeerPool('2', server)
     const peer3Pool = await buildPeerPool('3', server)
@@ -87,7 +91,6 @@ suite('PeerPool', () => {
     )
 
     peer1Pool.addTrack('2', track1, stream)
-    await peer1Pool.getNextNegotiationCompletedPromise('2')
     await condition(() =>
       peer2Pool.testTracks[track1.id]
     )
@@ -97,7 +100,6 @@ suite('PeerPool', () => {
     await peer1Pool.connectTo('3')
     await peer3Pool.getConnectedPromise('1')
     peer3Pool.addTrack('1', track0, stream)
-    await peer3Pool.getNextNegotiationCompletedPromise('1')
 
     await condition(() =>
       peer1Pool.testTracks[track0.id]
@@ -117,9 +119,6 @@ suite('PeerPool', () => {
 
     peer1Pool.addTrack('2', track0, stream)
     peer2Pool.addTrack('1', track1, stream)
-
-    await peer1Pool.getNextNegotiationCompletedPromise('2')
-    await peer2Pool.getNextNegotiationCompletedPromise('1')
 
     await condition(() => peer1Pool.testTracks[track1.id])
     await condition(() => peer2Pool.testTracks[track0.id])

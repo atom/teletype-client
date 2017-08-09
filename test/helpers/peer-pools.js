@@ -1,11 +1,15 @@
 const PeerPool = require('../../lib/peer-pool')
 
-module.exports =
+let testEpoch = 0
+const peerPools = []
+
+exports.buildPeerPool =
 async function buildPeerPool (peerId, server) {
   const peerPool = new PeerPool({
     peerId,
     restGateway: server.restGateway,
     pubSubGateway: server.pubSubGateway,
+    testEpoch
   })
   await peerPool.initialize()
 
@@ -27,5 +31,16 @@ async function buildPeerPool (peerId, server) {
     peerPool.testTracks[track.id] = {senderId, track}
   })
 
+  peerPools.push(peerPool)
+
   return peerPool
+}
+
+exports.clearPeerPools =
+function clearPeerPools () {
+  for (const peerPool of peerPools) {
+    peerPool.disconnect()
+  }
+  peerPools.length = 0
+  testEpoch++
 }

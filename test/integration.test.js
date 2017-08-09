@@ -8,6 +8,8 @@ const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
+let testEpoch = 0
+
 suite('Client Integration', () => {
   let server, portals, conditionErrorMessage
 
@@ -40,6 +42,8 @@ suite('Client Integration', () => {
     for (const portal of portals) {
       await portal.dispose()
     }
+
+    testEpoch++
   })
 
   test('sharing a portal and performing basic collaboration with a guest', async () => {
@@ -281,7 +285,8 @@ suite('Client Integration', () => {
     const client = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
-      didCreateOrJoinPortal: (portal) => portals.push(portal)
+      didCreateOrJoinPortal: (portal) => portals.push(portal),
+      testEpoch
     })
     await client.initialize()
     return client
