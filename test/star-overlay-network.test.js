@@ -346,7 +346,7 @@ suite('StarOverlayNetwork', () => {
       assert.equal(spoke2.testTracks[track1.id].senderId, 'peer-2')
     })
 
-    test('immediately broadcasts the current media tracks to new joiners', async () => {
+    test('immediately broadcasts current media tracks to new joiners unless tracks are stopped', async () => {
       const hubPool = await buildPeerPool('hub', server)
       const spoke1Pool = await buildPeerPool('spoke-1', server)
       const spoke2Pool = await buildPeerPool('spoke-2', server)
