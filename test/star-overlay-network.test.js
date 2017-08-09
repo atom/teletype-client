@@ -387,5 +387,35 @@ suite('StarOverlayNetwork', () => {
       await new Promise((r) => setTimeout(r, 100))
       assert(!spoke3.testTracks[track1.id])
     })
+
+    test('broadcasting the same track on multiple overlay networks', async () => {
+      const peer1Pool = await buildPeerPool('peer-1', server)
+      const peer2Pool = await buildPeerPool('peer-2', server)
+      const peer3Pool = await buildPeerPool('peer-3', server)
+
+      const hubA = buildStarNetwork('network-a', peer1Pool, true)
+      const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
+      const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
+      await spokeA1.connectTo('peer-1')
+      await spokeA2.connectTo('peer-1')
+
+      const hubB = buildStarNetwork('network-b', peer1Pool, true)
+      const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
+      const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
+      await spokeB1.connectTo('peer-1')
+      await spokeB2.connectTo('peer-1')
+
+      const stream = await getExampleMediaStream()
+      const track0 = stream.getTracks()[0]
+      const track1 = stream.getTracks()[1]
+
+      spokeA1.broadcastTrack('', track0, stream)
+      await condition(() => hubA.testTracks[track0.id])
+      await condition(() => spokeA2.testTracks[track0.id])
+
+      spokeB1.broadcastTrack('', track0, stream)
+      await condition(() => hubB.testTracks[track0.id])
+      await condition(() => spokeB2.testTracks[track0.id])
+    })
   })
 })
