@@ -4,7 +4,8 @@ const deepEqual = require('deep-equal')
 const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
-const Client = require('../lib/real-time-client')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
+const RealTimeClient = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
@@ -41,6 +42,7 @@ suite('Client Integration', () => {
 
     for (const portal of portals) {
       await portal.dispose()
+      portal.peerPool.disconnect()
     }
 
     testEpoch++
@@ -165,6 +167,22 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
   })
 
+  test('streaming a screen share track', async () => {
+    const host = await buildClient()
+    const guest = await buildClient()
+    const hostPortal = await host.createPortal()
+    const guestPortalDelegate = new FakePortalDelegate()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    guestPortal.setDelegate(guestPortalDelegate)
+
+    const stream = await getExampleMediaStream()
+    const track = stream.getTracks()[1]
+    hostPortal.addScreenShareTrack(track, stream)
+
+    await condition(() => guestPortalDelegate.getLastScreenShareTrack())
+    assert.equal(guestPortalDelegate.getLastScreenShareTrack().id, track.id)
+  })
+
   suite('leaving, closing, or losing connection to a portal', () => {
     let hostPortal, hostEditor
     let guest1Portal, guest1PortalDelegate, guest1Editor
@@ -282,7 +300,7 @@ suite('Client Integration', () => {
   })
 
   async function buildClient () {
-    const client = new Client({
+    const client = new RealTimeClient({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
