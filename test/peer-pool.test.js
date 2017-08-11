@@ -31,8 +31,8 @@ suite('PeerPool', () => {
     const peer3Pool = await buildPeerPool('3', server)
 
     // Connection
-    peer1Pool.connectTo('3')
-    peer2Pool.connectTo('3')
+    await peer1Pool.connectTo('3')
+    await peer2Pool.connectTo('3')
 
     await peer1Pool.getConnectedPromise('3')
     await peer2Pool.getConnectedPromise('3')
