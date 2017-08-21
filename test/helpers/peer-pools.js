@@ -26,11 +26,6 @@ async function buildPeerPool (peerId, server) {
     })
   })
 
-  peerPool.testTracks = {}
-  peerPool.onTrack(({senderId, track}) => {
-    peerPool.testTracks[track.id] = {senderId, track}
-  })
-
   peerPools.push(peerPool)
 
   return peerPool

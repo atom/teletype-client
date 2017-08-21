@@ -18,11 +18,5 @@ function buildStarNetwork (id, peerPool, isHub) {
     })
   })
 
-  network.testTracks = {}
-  network.onTrack(({senderId, metadata, track}) => {
-    metadata = metadata.toString()
-    network.testTracks[track.id] = {senderId, metadata, track}
-  })
-
   return network
 }

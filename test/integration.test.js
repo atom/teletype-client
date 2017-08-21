@@ -167,22 +167,6 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
   })
 
-  test('streaming a screen share track', async () => {
-    const host = await buildClient()
-    const guest = await buildClient()
-    const hostPortal = await host.createPortal()
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
-
-    const stream = await getExampleMediaStream()
-    const track = stream.getTracks()[1]
-    hostPortal.addScreenShareTrack(track, stream)
-
-    await condition(() => guestPortalDelegate.getLastScreenShareTrack())
-    assert.equal(guestPortalDelegate.getLastScreenShareTrack().id, track.id)
-  })
-
   suite('leaving, closing, or losing connection to a portal', () => {
     let hostPortal, hostEditor
     let guest1Portal, guest1PortalDelegate, guest1Editor
