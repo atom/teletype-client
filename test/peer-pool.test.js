@@ -21,9 +21,21 @@ suite('PeerPool', () => {
   })
 
   test('connection and sending messages between peers', async () => {
-    const peer1Pool = await buildPeerPool('1', server)
-    const peer2Pool = await buildPeerPool('2', server)
-    const peer3Pool = await buildPeerPool('3', server)
+    const user1 = {username: 'user-1'}
+    const user2 = {username: 'user-2'}
+    const user3 = {username: 'user-3'}
+    server.identityProvider.setUsersByOauthToken({
+      'token-1': user1,
+      'token-2': user2,
+      'token-3': user3
+    })
+
+    const peer1Pool = await buildPeerPool('1', 'token-1', server)
+    const peer2Pool = await buildPeerPool('2', 'token-2', server)
+    const peer3Pool = await buildPeerPool('3', 'token-3', server)
+    assert.deepEqual(peer1Pool.getUser('1'), user1)
+    assert.deepEqual(peer2Pool.getUser('2'), user2)
+    assert.deepEqual(peer3Pool.getUser('3'), user3)
 
     // Connection
     peer1Pool.connectTo('3')
@@ -33,6 +45,10 @@ suite('PeerPool', () => {
       peer2Pool.isConnectedToPeer('3') &&
       peer3Pool.isConnectedToPeer('1') && peer3Pool.isConnectedToPeer('2')
     ))
+    assert.deepEqual(peer1Pool.getUser('3'), user3)
+    assert.deepEqual(peer3Pool.getUser('1'), user1)
+    assert.deepEqual(peer2Pool.getUser('3'), user3)
+    assert.deepEqual(peer3Pool.getUser('2'), user2)
 
     // Single-part messages
     peer1Pool.send('3', Buffer.from('a'))
@@ -69,5 +85,14 @@ suite('PeerPool', () => {
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
+
+    // Retain your own identity, but discard identity for disconnected peers
+    assert.deepEqual(peer1Pool.getUser('1'), user1)
+    assert.deepEqual(peer2Pool.getUser('2'), user2)
+    assert.deepEqual(peer3Pool.getUser('3'), user3)
+    assert(!peer1Pool.getUser('3'))
+    assert(!peer3Pool.getUser('1'))
+    assert(!peer2Pool.getUser('3'))
+    assert(!peer3Pool.getUser('2'))
   })
 })

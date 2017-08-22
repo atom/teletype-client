@@ -1,9 +1,10 @@
 const PeerPool = require('../../lib/peer-pool')
 
 module.exports =
-async function buildPeerPool (peerId, server) {
+async function buildPeerPool (peerId, oauthToken, server) {
   const peerPool = new PeerPool({
     peerId,
+    oauthToken,
     restGateway: server.restGateway,
     pubSubGateway: server.pubSubGateway,
   })
