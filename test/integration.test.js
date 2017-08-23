@@ -8,7 +8,7 @@ const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
-suite('Client Integration', () => {
+suite.skip('Client Integration', () => {
   let server, portals, conditionErrorMessage
 
   suiteSetup(async () => {

@@ -19,13 +19,17 @@ suite('Router', () => {
   })
 
   setup(() => {
+    server.identityProvider.setUsersByOauthToken({
+      'some-token': {username: 'some-user'},
+    })
+
     return server.reset()
   })
 
   test('notifications', async () => {
-    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), true)
-    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), false)
-    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), false)
+    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', 'some-token', server), true)
+    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', 'some-token', server), false)
+    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', 'some-token', server), false)
     await spoke1.connectTo('hub')
     await spoke2.connectTo('hub')
 
@@ -56,9 +60,9 @@ suite('Router', () => {
   })
 
   test('request/response', async () => {
-    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), true)
-    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), false)
-    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), false)
+    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', 'some-token', server), true)
+    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', 'some-token', server), false)
+    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', 'some-token', server), false)
     await spoke1.connectTo('hub')
     await spoke2.connectTo('hub')
 
