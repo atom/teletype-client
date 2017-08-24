@@ -8,7 +8,7 @@ const Client = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
-suite.skip('Client Integration', () => {
+suite('Client Integration', () => {
   let server, portals, conditionErrorMessage
 
   suiteSetup(async () => {
@@ -29,6 +29,11 @@ suite.skip('Client Integration', () => {
   setup(() => {
     conditionErrorMessage = null
     portals = []
+
+    server.identityProvider.setUsersByOauthToken({
+      'some-token': {username: 'some-user'},
+    })
+
     return server.reset()
   })
 
@@ -281,6 +286,7 @@ suite.skip('Client Integration', () => {
     const client = new Client({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
+      oauthToken: 'some-token',
       didCreateOrJoinPortal: (portal) => portals.push(portal)
     })
     await client.initialize()
