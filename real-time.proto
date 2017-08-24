@@ -91,7 +91,7 @@ message NetworkMessage {
 
   oneof variant {
     StarConnection star_connection = 2;
-    StarConnectionAck star_connection_ack = 3;
+    StarJoinResponse star_join_response = 3;
     StarDisconnection star_disconnection = 4;
     StarUnicast star_unicast = 5;
     StarBroadcast star_broadcast = 6;
@@ -104,8 +104,7 @@ message NetworkMessage {
     NetworkMember member = 2;
   }
 
-  // TODO Rename to StarJoinResponse: hub to joiner
-  message StarConnectionAck {
+  message StarJoinResponse {
     repeated NetworkMember members = 1;
   }
 
