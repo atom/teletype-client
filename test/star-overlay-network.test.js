@@ -4,8 +4,9 @@ const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const setEqual = require('./helpers/set-equal')
 const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
 suite('StarOverlayNetwork', () => {
   let server
@@ -24,6 +25,10 @@ suite('StarOverlayNetwork', () => {
     })
 
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   suite('membership', async () => {

@@ -4,9 +4,12 @@ const deepEqual = require('deep-equal')
 const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
-const Client = require('../lib/real-time-client')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
+const RealTimeClient = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
+
+let testEpoch = 0
 
 suite('Client Integration', () => {
   let server, portals, conditionErrorMessage
@@ -44,7 +47,10 @@ suite('Client Integration', () => {
 
     for (const portal of portals) {
       await portal.dispose()
+      portal.peerPool.disconnect()
     }
+
+    testEpoch++
   })
 
   test('sharing a portal and performing basic collaboration with a guest', async () => {
@@ -283,11 +289,12 @@ suite('Client Integration', () => {
   })
 
   async function buildClient () {
-    const client = new Client({
+    const client = new RealTimeClient({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       oauthToken: 'some-token',
-      didCreateOrJoinPortal: (portal) => portals.push(portal)
+      didCreateOrJoinPortal: (portal) => portals.push(portal),
+      testEpoch
     })
     await client.initialize()
     return client

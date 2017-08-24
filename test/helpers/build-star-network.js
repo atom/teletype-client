@@ -17,5 +17,6 @@ function buildStarNetwork (id, peerPool, isHub) {
       message: message.toString()
     })
   })
+
   return network
 }

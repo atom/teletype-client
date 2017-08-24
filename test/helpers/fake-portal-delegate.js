@@ -29,6 +29,14 @@ class FakePortalDelegate {
     return this.textEditor
   }
 
+  addScreenShareTrack (track) {
+    this.lastScreenShareTrack = track
+  }
+
+  getLastScreenShareTrack () {
+    return this.lastScreenShareTrack
+  }
+
   getActiveTextBufferURI () {
     return (this.textEditor) ? this.textEditor.textBuffer.uri : null
   }

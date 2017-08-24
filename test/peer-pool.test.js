@@ -1,9 +1,10 @@
 require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
-const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
 const {startTestServer} = require('@atom/real-time-server')
+const condition = require('./helpers/condition')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
 suite('PeerPool', () => {
   let server
@@ -18,6 +19,10 @@ suite('PeerPool', () => {
 
   setup(() => {
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   test('connection and sending messages between peers', async () => {
@@ -38,13 +43,14 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.getUser('3'), user3)
 
     // Connection
-    peer1Pool.connectTo('3')
-    peer2Pool.connectTo('3')
-    await condition(() => (
-      peer1Pool.isConnectedToPeer('3') &&
-      peer2Pool.isConnectedToPeer('3') &&
-      peer3Pool.isConnectedToPeer('1') && peer3Pool.isConnectedToPeer('2')
-    ))
+    await peer1Pool.connectTo('3')
+    await peer2Pool.connectTo('3')
+
+    await peer1Pool.getConnectedPromise('3')
+    await peer2Pool.getConnectedPromise('3')
+    await peer3Pool.getConnectedPromise('1')
+    await peer3Pool.getConnectedPromise('2')
+
     assert.deepEqual(peer1Pool.getUser('3'), user3)
     assert.deepEqual(peer3Pool.getUser('1'), user1)
     assert.deepEqual(peer2Pool.getUser('3'), user3)
@@ -54,10 +60,13 @@ suite('PeerPool', () => {
     peer1Pool.send('3', Buffer.from('a'))
     peer2Pool.send('3', Buffer.from('b'))
 
-    await condition(() => deepEqual(peer3Pool.testInbox, [
-      {senderId: '1', message: 'a'},
-      {senderId: '2', message: 'b'}
-    ]))
+    await condition(() => {
+      peer3Pool.testInbox.sort((a, b) => a.senderId.localeCompare(b.senderId))
+      return deepEqual(peer3Pool.testInbox, [
+        {senderId: '1', message: 'a'},
+        {senderId: '2', message: 'b'}
+      ])
+    })
     peer3Pool.testInbox.length = 0
 
     // Multi-part messages
@@ -68,20 +77,15 @@ suite('PeerPool', () => {
 
     // Disconnection
     peer2Pool.disconnect()
-    await condition(() => (
-      peer1Pool.isConnectedToPeer('3') &&
-      !peer2Pool.isConnectedToPeer('3') &&
-      peer3Pool.isConnectedToPeer('1') && !peer3Pool.isConnectedToPeer('2')
-    ))
+    await peer2Pool.getDisconnectedPromise('3')
+    await peer3Pool.getDisconnectedPromise('2')
     assert.deepEqual(peer1Pool.testDisconnectionEvents, [])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2'])
 
     peer3Pool.disconnect()
-    await condition(() => (
-      !peer1Pool.isConnectedToPeer('3') &&
-      !peer3Pool.isConnectedToPeer('1')
-    ))
+    await peer1Pool.getDisconnectedPromise('3')
+    await peer3Pool.getDisconnectedPromise('1')
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])

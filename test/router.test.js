@@ -3,8 +3,9 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
-const buildPeerPool = require('./helpers/build-peer-pool')
+const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
+const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const Router = require('../lib/router')
 
 suite('Router', () => {
@@ -24,6 +25,10 @@ suite('Router', () => {
     })
 
     return server.reset()
+  })
+
+  teardown(() => {
+    clearPeerPools()
   })
 
   test('notifications', async () => {
@@ -114,8 +119,6 @@ suite('Router', () => {
 })
 
 function recordNotifications (router, channelIds) {
-  const peerId = router.network.peerPool.peerId
-
   if (!router.testInbox) router.testInbox = {}
   channelIds.forEach((channelId) => {
     router.onNotification(channelId, ({senderId, message}) => {
@@ -124,6 +127,18 @@ function recordNotifications (router, channelIds) {
         senderId, message: message.toString()
       })
       router.testInbox[channelId].sort((a, b) => a.senderId.localeCompare(b.senderId))
+    })
+  })
+}
+
+function recordTracks (router, channelIds) {
+  if (!router.testTracks) router.testTracks = {}
+  channelIds.forEach((channelId) => {
+    router.testTracks[channelId] = {}
+    router.onTrack(channelId, ({senderId, metadata, track}) => {
+      router.testTracks[channelId][track.id] = {
+        senderId, metadata: metadata.toString(), track
+      }
     })
   })
 }

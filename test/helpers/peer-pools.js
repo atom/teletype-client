@@ -1,12 +1,16 @@
 const PeerPool = require('../../lib/peer-pool')
 
-module.exports =
+let testEpoch = 0
+const peerPools = []
+
+exports.buildPeerPool =
 async function buildPeerPool (peerId, oauthToken, server) {
   const peerPool = new PeerPool({
     peerId,
     oauthToken,
     restGateway: server.restGateway,
     pubSubGateway: server.pubSubGateway,
+    testEpoch
   })
   await peerPool.initialize()
 
@@ -22,5 +26,17 @@ async function buildPeerPool (peerId, oauthToken, server) {
       message: message.toString()
     })
   })
+
+  peerPools.push(peerPool)
+
   return peerPool
+}
+
+exports.clearPeerPools =
+function clearPeerPools () {
+  for (const peerPool of peerPools) {
+    peerPool.disconnect()
+  }
+  peerPools.length = 0
+  testEpoch++
 }
