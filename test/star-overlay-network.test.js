@@ -26,21 +26,6 @@ suite('StarOverlayNetwork', () => {
     return server.reset()
   })
 
-  // TODO Move function elsewhere
-  function hasSameMembers (actual, expected) {
-    actual = Array.from(actual)
-    expected = Array.from(expected)
-
-    if (actual.length !== expected.length) return false
-
-    for (let i = 0; i < actual.length; i++) {
-      const matchingMembers = expected.filter((m) => deepEqual(actual[i], m))
-      if (matchingMembers.length !== 1) return false
-    }
-
-    return true
-  }
-
   suite('membership', async () => {
     let hubPool, spoke1Pool, spoke2Pool, spoke3Pool, members
 
@@ -333,3 +318,17 @@ suite('StarOverlayNetwork', () => {
     })
   })
 })
+
+function hasSameMembers (actual, expected) {
+  actual = Array.from(actual)
+  expected = Array.from(expected)
+
+  if (actual.length !== expected.length) return false
+
+  for (let i = 0; i < actual.length; i++) {
+    const matchingMembers = expected.filter((m) => deepEqual(actual[i], m))
+    if (matchingMembers.length !== 1) return false
+  }
+
+  return true
+}
