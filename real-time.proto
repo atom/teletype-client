@@ -90,7 +90,7 @@ message NetworkMessage {
   string network_id = 1;
 
   oneof variant {
-    StarConnection star_connection = 2;
+    StarJoinRequest star_join_request = 2;
     StarJoinResponse star_join_response = 3;
     StarDisconnection star_disconnection = 4;
     StarUnicast star_unicast = 5;
@@ -98,8 +98,7 @@ message NetworkMessage {
     StarJoinNotification star_join_notification = 7;
   }
 
-  // TODO Rename to StarJoinRequest: joiner to hub
-  message StarConnection {
+  message StarJoinRequest {
     string sender_id = 1;
     NetworkMember member = 2;
   }
