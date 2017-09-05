@@ -26,13 +26,10 @@ class Buffer {
   }
 
   apply (operation) {
-    if (operation.type === 'delete') {
-      this.delete(operation.position, operation.extent)
-    } else if (operation.type === 'insert') {
-      this.insert(operation.position, operation.text)
-    } else {
-      throw new Error('Unknown operation type')
-    }
+    const oldExtent = traversal(operation.oldEnd, operation.oldStart)
+    this.delete(operation.oldStart, oldExtent)
+
+    this.insert(operation.newStart, operation.newText)
   }
 
   insert (position, text) {
@@ -76,6 +73,14 @@ function traverse (start, distance) {
     return {row: start.row, column: start.column + distance.column}
   else {
     return {row: start.row + distance.row, column: distance.column}
+  }
+}
+
+function traversal (end, start) {
+  if (end.row === start.row) {
+    return {row: 0, column: end.column - start.column}
+  } else {
+    return {row: end.row - start.row, column: end.column}
   }
 }
 
