@@ -4,9 +4,10 @@ let testEpoch = 0
 const peerPools = []
 
 exports.buildPeerPool =
-async function buildPeerPool (peerId, server) {
+async function buildPeerPool (peerId, oauthToken, server) {
   const peerPool = new PeerPool({
     peerId,
+    oauthToken,
     restGateway: server.restGateway,
     pubSubGateway: server.pubSubGateway,
     testEpoch

@@ -80,23 +80,35 @@ message RouterMessage {
   }
 }
 
+// TODO Rename to User
+message NetworkMember {
+  string peer_id = 1;
+  string username = 2;
+}
+
 message NetworkMessage {
   string network_id = 1;
 
   oneof variant {
-    StarConnection star_connection = 2;
-    StarConnectionAck star_connection_ack = 3;
+    StarJoinRequest star_join_request = 2;
+    StarJoinResponse star_join_response = 3;
     StarDisconnection star_disconnection = 4;
     StarUnicast star_unicast = 5;
     StarBroadcast star_broadcast = 6;
+    StarJoinNotification star_join_notification = 7;
   }
 
-  message StarConnection {
+  message StarJoinRequest {
     string sender_id = 1;
+    NetworkMember member = 2;
   }
 
-  message StarConnectionAck {
-    repeated string member_ids = 1;
+  message StarJoinResponse {
+    repeated NetworkMember members = 1;
+  }
+
+  message StarJoinNotification {
+    NetworkMember member = 1;
   }
 
   message StarDisconnection {

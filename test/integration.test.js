@@ -32,6 +32,11 @@ suite('Client Integration', () => {
   setup(() => {
     conditionErrorMessage = null
     portals = []
+
+    server.identityProvider.setUsersByOauthToken({
+      'some-token': {username: 'some-user'},
+    })
+
     return server.reset()
   })
 
@@ -287,6 +292,7 @@ suite('Client Integration', () => {
     const client = new RealTimeClient({
       restGateway: server.restGateway,
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
+      oauthToken: 'some-token',
       didCreateOrJoinPortal: (portal) => portals.push(portal),
       testEpoch
     })
