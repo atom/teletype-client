@@ -5,6 +5,7 @@ class Buffer {
   constructor (text, {didSetText} = {}) {
     this.text = text
     this.textEqualityResolvers = new Map()
+    this.markers = {}
     this.didSetText = didSetText
   }
 
@@ -15,6 +16,43 @@ class Buffer {
   setText (text) {
     this.text = text
     if (this.didSetText) this.didSetText(text)
+  }
+
+  updateText (textUpdates) {
+    this.applyMany(textUpdates)
+  }
+
+  updateMarkers (markerUpdates) {
+    for (const siteId in markerUpdates) {
+      let layersById = this.markers[siteId]
+      if (!layersById) {
+        layersById = {}
+        this.markers[siteId] = layersById
+      }
+
+      for (const layerId in markerUpdates[siteId]) {
+        let markersById = this.markers[siteId][layerId]
+        if (!markersById) {
+          markersById = {}
+          this.markers[siteId][layerId] = markersById
+        }
+        for (const markerId in markerUpdates[siteId][layerId]) {
+          const update = markerUpdates[siteId][layerId][markerId]
+          if (update) {
+            markersById[markerId] = Object.assign({}, markersById[markerId] || {}, update)
+          } else {
+            delete markersById[markerId]
+          }
+        }
+      }
+    }
+  }
+
+  getMarkers (siteId, layerId) {
+    const markersByLayerId = this.markers[siteId]
+    if (markersByLayerId) {
+      return markersByLayerId[layerId]
+    }
   }
 
   applyMany (operations) {
@@ -36,7 +74,7 @@ class Buffer {
     const index = characterIndexForPosition(this.text, position)
     this.text = this.text.slice(0, index) + text + this.text.slice(index)
     this.resolveOnTextEquality()
-    return {type: 'insert', position, text}
+    return [position, position, text]
   }
 
   delete (startPosition, extent) {
@@ -48,7 +86,7 @@ class Buffer {
     const endIndex = characterIndexForPosition(this.text, endPosition)
     this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
     this.resolveOnTextEquality()
-    return {type: 'delete', position: startPosition, extent}
+    return [startPosition, endPosition, '']
   }
 
   resolveOnTextEquality () {

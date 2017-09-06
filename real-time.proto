@@ -28,12 +28,11 @@ message PortalUpdate {
 message TextEditor {
   uint32 id = 1;
   uint32 text_buffer_id = 2;
-  map<uint32, MarkerLayer> selection_marker_layers_by_site_id = 3;
+  map<uint32, uint32> selection_layer_ids_by_site_id = 3;
 }
 
 message TextEditorUpdate {
-  uint32 selection_marker_layer_site_id = 1;
-  MarkerLayer selection_marker_layer = 2;
+  map<uint32, uint32> selection_layer_ids_by_site_id = 1;
 }
 
 message TextBuffer {
@@ -44,16 +43,6 @@ message TextBuffer {
 
 message TextBufferUpdate {
   repeated Operation operations = 1;
-}
-
-message Marker {
-  uint32 id = 1;
-  RemotePosition start = 2;
-  RemotePosition end = 3;
-}
-
-message MarkerLayer {
-  repeated Marker markers = 1;
 }
 
 message RouterMessage {
