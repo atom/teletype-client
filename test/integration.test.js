@@ -206,7 +206,7 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
   })
 
-  suite.skip('leaving, closing, or losing connection to a portal', () => {
+  suite('leaving, closing, or losing connection to a portal', () => {
     let hostPortal, hostEditor
     let guest1Portal, guest1PortalDelegate, guest1Editor
     let guest2Portal, guest2PortalDelegate, guest2Editor
@@ -215,6 +215,18 @@ suite('Client Integration', () => {
     setup(async () => {
       const host = await buildClient()
       hostPortal = await host.createPortal()
+
+      // NOTE: If we create the host buffer and editor _after_ guests join, the
+      // await condition fails at the end of this setup block 🤔
+
+      const hostBuffer = new Buffer('')
+      const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: hostBuffer.text})
+      hostClientBuffer.setDelegate(hostBuffer)
+
+      const hostClientEditor = await hostPortal.createTextEditor({textBuffer: hostClientBuffer, selections: {}})
+      hostEditor = new Editor(hostBuffer)
+      hostClientEditor.setDelegate(hostEditor)
+      await hostPortal.setActiveTextEditor(hostClientEditor)
 
       const guest1 = await buildClient()
       guest1PortalDelegate = new FakePortalDelegate()
@@ -231,11 +243,6 @@ suite('Client Integration', () => {
       guest3Portal = await guest3.joinPortal(hostPortal.id)
       guest3Portal.setDelegate(guest3PortalDelegate)
 
-      const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: ''})
-      hostEditor = new Editor()
-      const hostClientEditor = await hostPortal.createTextEditor({textBuffer: hostClientBuffer, selectionRanges: {}})
-      hostClientEditor.setDelegate(hostEditor)
-      await hostPortal.setActiveTextEditor(hostClientEditor)
       await condition(() =>
         guest1PortalDelegate.getActiveTextEditor() != null &&
         guest2PortalDelegate.getActiveTextEditor() != null &&
@@ -243,36 +250,51 @@ suite('Client Integration', () => {
       )
 
       const guest1ClientEditor = guest1PortalDelegate.getActiveTextEditor()
-      guest1Editor = new Editor()
+      const guest1ClientBuffer = guest1ClientEditor.textBuffer
+      const guest1Buffer = new Buffer()
+      guest1ClientBuffer.setDelegate(guest1Buffer)
+      guest1Editor = new Editor(guest1Buffer)
       guest1ClientEditor.setDelegate(guest1Editor)
-      guest1ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest1ClientEditor.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
       const guest2ClientEditor = guest2PortalDelegate.getActiveTextEditor()
-      guest2Editor = new Editor()
+      const guest2ClientBuffer = guest2ClientEditor.textBuffer
+      const guest2Buffer = new Buffer()
+      guest2ClientBuffer.setDelegate(guest2Buffer)
+      guest2Editor = new Editor(guest2Buffer)
       guest2ClientEditor.setDelegate(guest2Editor)
-      guest2ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest2ClientEditor.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
       const guest3ClientEditor = guest3PortalDelegate.getActiveTextEditor()
-      guest3Editor = new Editor()
+      const guest3ClientBuffer = guest3ClientEditor.textBuffer
+      const guest3Buffer = new Buffer()
+      guest3ClientBuffer.setDelegate(guest3Buffer)
+      guest3Editor = new Editor(guest3Buffer)
       guest3ClientEditor.setDelegate(guest3Editor)
-      guest3ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      guest3ClientEditor.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
-        hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null &&
-        hostEditor.markerLayerForSiteId(guest3Portal.siteId) != null
+        hostEditor.getSelections(guest1Portal.siteId) != null &&
+        hostEditor.getSelections(guest2Portal.siteId) != null &&
+        hostEditor.getSelections(guest3Portal.siteId) != null
       )
     })
 
     test('guest leaving a portal', async () => {
       guest1Portal.dispose()
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+        hostEditor.getSelections(guest1Portal.siteId) == null &&
+        guest2Editor.getSelections(guest1Portal.siteId) == null &&
+        guest3Editor.getSelections(guest1Portal.siteId) == null
       )
-      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(hostEditor.getSelections(guest2Portal.siteId))
+      assert(hostEditor.getSelections(guest3Portal.siteId))
     })
 
     test('host closing a portal', async () => {
@@ -280,45 +302,45 @@ suite('Client Integration', () => {
       hostPortal.dispose()
       await condition(() => guest1PortalDelegate.hasHostClosedPortal() && guest2PortalDelegate.hasHostClosedPortal() && guest3PortalDelegate.hasHostClosedPortal())
 
-      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest1Editor.getSelections(hostPortal.siteId))
+      assert(!guest1Editor.getSelections(guest2Portal.siteId))
+      assert(!guest1Editor.getSelections(guest3Portal.siteId))
 
-      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest2Editor.getSelections(hostPortal.siteId))
+      assert(!guest2Editor.getSelections(guest1Portal.siteId))
+      assert(!guest2Editor.getSelections(guest3Portal.siteId))
 
-      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(!guest3Editor.getSelections(hostPortal.siteId))
+      assert(!guest3Editor.getSelections(guest1Portal.siteId))
+      assert(!guest3Editor.getSelections(guest2Portal.siteId))
     })
 
     test('losing connection to guest', async () => {
       guest1Portal.simulateNetworkFailure()
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+        hostEditor.getSelections(guest1Portal.siteId) == null &&
+        guest2Editor.getSelections(guest1Portal.siteId) == null &&
+        guest3Editor.getSelections(guest1Portal.siteId) == null
       )
-      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(hostEditor.getSelections(guest2Portal.siteId))
+      assert(hostEditor.getSelections(guest3Portal.siteId))
     })
 
     test('losing connection to host', async () => {
       hostPortal.simulateNetworkFailure()
       await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
-      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest1Editor.getSelections(hostPortal.siteId))
+      assert(!guest1Editor.getSelections(guest2Portal.siteId))
+      assert(!guest1Editor.getSelections(guest3Portal.siteId))
 
-      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest2Editor.getSelections(hostPortal.siteId))
+      assert(!guest2Editor.getSelections(guest1Portal.siteId))
+      assert(!guest2Editor.getSelections(guest3Portal.siteId))
 
-      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(!guest3Editor.getSelections(hostPortal.siteId))
+      assert(!guest3Editor.getSelections(guest1Portal.siteId))
+      assert(!guest3Editor.getSelections(guest2Portal.siteId))
     })
   })
 

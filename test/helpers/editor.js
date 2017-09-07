@@ -9,7 +9,7 @@ class Editor {
 
   setSelectionLayerIdForSiteId (siteId, layerId) {
     assert.equal(typeof siteId, 'number', 'siteId must be a number!')
-    assert.equal(typeof layerId, 'number', 'layerId must be a number!')
+    if (layerId != null) assert.equal(typeof layerId, 'number', 'layerId must be a number!')
     this.selectionLayerIdsBySiteId.set(siteId, layerId)
   }
 
