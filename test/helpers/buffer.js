@@ -22,39 +22,6 @@ class Buffer {
     this.applyMany(textUpdates)
   }
 
-  updateMarkers (markerUpdates) {
-    for (const siteId in markerUpdates) {
-      let layersById = this.markers[siteId]
-      if (!layersById) {
-        layersById = {}
-        this.markers[siteId] = layersById
-      }
-
-      for (const layerId in markerUpdates[siteId]) {
-        let markersById = this.markers[siteId][layerId]
-        if (!markersById) {
-          markersById = {}
-          this.markers[siteId][layerId] = markersById
-        }
-        for (const markerId in markerUpdates[siteId][layerId]) {
-          const update = markerUpdates[siteId][layerId][markerId]
-          if (update) {
-            markersById[markerId] = Object.assign({}, markersById[markerId] || {}, update)
-          } else {
-            delete markersById[markerId]
-          }
-        }
-      }
-    }
-  }
-
-  getMarkers (siteId, layerId) {
-    const markersByLayerId = this.markers[siteId]
-    if (markersByLayerId) {
-      return markersByLayerId[layerId]
-    }
-  }
-
   applyMany (operations) {
     assert(Array.isArray(operations))
 

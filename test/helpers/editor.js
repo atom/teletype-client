@@ -2,20 +2,35 @@ const assert = require('assert')
 
 module.exports =
 class Editor {
-  constructor (buffer) {
-    this.buffer = buffer
-    this.selectionLayerIdsBySiteId = new Map()
+  constructor () {
+    this.selectionsBySiteId = {}
   }
 
-  setSelectionLayerIdForSiteId (siteId, layerId) {
+  getSelectionsForSiteId (siteId) {
     assert.equal(typeof siteId, 'number', 'siteId must be a number!')
-    if (layerId != null) assert.equal(typeof layerId, 'number', 'layerId must be a number!')
-    this.selectionLayerIdsBySiteId.set(siteId, layerId)
+    return this.selectionsBySiteId[siteId]
   }
 
-  getSelections (siteId) {
+  updateSelectionsForSiteId (siteId, selectionUpdates) {
     assert.equal(typeof siteId, 'number', 'siteId must be a number!')
-    const layerId = this.selectionLayerIdsBySiteId.get(siteId)
-    return this.buffer.getMarkers(siteId, layerId)
+
+    let selectionsForSite = this.selectionsBySiteId[siteId]
+    if (!selectionsForSite) {
+      selectionsForSite = {}
+      this.selectionsBySiteId[siteId] = selectionsForSite
+    }
+
+    for (const selectionId in selectionUpdates) {
+      const selectionUpdate = selectionUpdates[selectionId]
+      if (selectionUpdate) {
+        selectionsForSite[selectionId] = selectionUpdate
+      } else {
+        delete selectionsForSite[selectionId]
+      }
+    }
+  }
+
+  clearSelectionsForSiteId (siteId) {
+    delete this.selectionsBySiteId[siteId]
   }
 }
