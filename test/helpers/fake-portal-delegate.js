@@ -21,12 +21,12 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  setActiveTextEditor (textEditor) {
-    this.textEditor = textEditor
+  setActiveEditorProxy (editorProxy) {
+    this.editorProxy = editorProxy
   }
 
-  getActiveTextEditor () {
-    return this.textEditor
+  getActiveEditorProxy () {
+    return this.editorProxy
   }
 
   addScreenShareTrack (track) {
@@ -37,7 +37,7 @@ class FakePortalDelegate {
     return this.lastScreenShareTrack
   }
 
-  getActiveTextBufferURI () {
-    return (this.textEditor) ? this.textEditor.textBuffer.uri : null
+  getActiveBufferProxyURI () {
+    return (this.editorProxy) ? this.editorProxy.bufferProxy.uri : null
   }
 }

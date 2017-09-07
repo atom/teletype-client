@@ -4,19 +4,19 @@ import "tachyon.proto";
 
 message PortalSubscriptionResponse {
   map<string, uint32> site_ids_by_peer_id = 1;
-  TextEditor active_text_editor = 2;
-  TextBuffer active_text_buffer = 3;
+  EditorProxy active_editor_proxy = 2;
+  BufferProxy active_buffer_proxy = 3;
 }
 
 message PortalUpdate {
   oneof variant {
-    TextEditorSwitch text_editor_switch = 1;
+    EditorProxySwitch editor_proxy_switch = 1;
     SiteAssignment site_assignment = 2;
   }
 
-  message TextEditorSwitch {
-    uint32 text_editor_id = 1;
-    uint32 text_buffer_id = 2;
+  message EditorProxySwitch {
+    uint32 editor_proxy_id = 1;
+    uint32 buffer_proxy_id = 2;
   }
 
   message SiteAssignment {
@@ -25,23 +25,23 @@ message PortalUpdate {
   }
 }
 
-message TextEditor {
+message EditorProxy {
   uint32 id = 1;
-  uint32 text_buffer_id = 2;
+  uint32 buffer_proxy_id = 2;
   map<uint32, uint32> selection_layer_ids_by_site_id = 3;
 }
 
-message TextEditorUpdate {
+message EditorProxyUpdate {
   map<uint32, uint32> selection_layer_ids_by_site_id = 1;
 }
 
-message TextBuffer {
+message BufferProxy {
   uint32 id = 1;
   string uri = 2;
   repeated Operation operations = 3;
 }
 
-message TextBufferUpdate {
+message BufferProxyUpdate {
   repeated Operation operations = 1;
 }
 
