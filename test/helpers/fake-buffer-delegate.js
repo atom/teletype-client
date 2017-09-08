@@ -19,22 +19,14 @@ class Buffer {
   }
 
   updateText (textUpdates) {
-    this.applyMany(textUpdates)
-  }
+    assert(Array.isArray(textUpdates))
 
-  applyMany (operations) {
-    assert(Array.isArray(operations))
-
-    for (let i = operations.length - 1; i >= 0; i--) {
-      this.apply(operations[i])
+    for (let i = textUpdates.length - 1; i >= 0; i--) {
+      const textUpdate = textUpdates[i]
+      const oldExtent = traversal(textUpdate.oldEnd, textUpdate.oldStart)
+      this.delete(textUpdate.oldStart, oldExtent)
+      this.insert(textUpdate.newStart, textUpdate.newText)
     }
-  }
-
-  apply (operation) {
-    const oldExtent = traversal(operation.oldEnd, operation.oldStart)
-    this.delete(operation.oldStart, oldExtent)
-
-    this.insert(operation.newStart, operation.newText)
   }
 
   insert (position, text) {
