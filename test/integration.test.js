@@ -5,7 +5,7 @@ const Buffer = require('./helpers/buffer')
 const Editor = require('./helpers/editor')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
-const RealTimeClient = require('../lib/real-time-client')
+const {RealTimeClient, PortalNotFoundError} = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
@@ -281,6 +281,32 @@ suite('Client Integration', () => {
       assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
       assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
     })
+  })
+
+  test('attempting to join a non-existent portal', async () => {
+    const client = await buildClient()
+
+    // Well-formed, but non-existent portal ID.
+    {
+      let exception
+      try {
+        await client.joinPortal('00000000-0000-0000-0000-000000000000')
+      } catch (e) {
+        exception = e
+      }
+      assert(exception instanceof PortalNotFoundError)
+    }
+
+    // Malformed Portal ID.
+    {
+      let exception
+      try {
+        await client.joinPortal('malformed-portal-id')
+      } catch (e) {
+        exception = e
+      }
+      assert(exception instanceof PortalNotFoundError)
+    }
   })
 
   async function buildClient () {
