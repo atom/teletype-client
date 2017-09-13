@@ -9,6 +9,14 @@ class Buffer {
     this.didSetText = didSetText
   }
 
+  dispose () {
+    this.disposed = true
+  }
+
+  isDisposed () {
+    return this.disposed
+  }
+
   getText () {
     return this.text
   }

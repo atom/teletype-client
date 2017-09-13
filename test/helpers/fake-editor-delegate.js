@@ -6,6 +6,14 @@ class Editor {
     this.selectionsBySiteId = {}
   }
 
+  dispose () {
+    this.disposed = true
+  }
+
+  isDisposed () {
+    return this.disposed
+  }
+
   getSelectionsForSiteId (siteId) {
     assert.equal(typeof siteId, 'number', 'siteId must be a number!')
     return this.selectionsBySiteId[siteId]

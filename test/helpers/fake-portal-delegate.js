@@ -5,6 +5,14 @@ class FakePortalDelegate {
     this.hostLostConnection = false
   }
 
+  dispose () {
+    this.disposed = true
+  }
+
+  isDisposed () {
+    return this.disposed
+  }
+
   hostDidClosePortal () {
     this.hostClosedPortal = true
   }
