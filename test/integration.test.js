@@ -202,6 +202,50 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
   })
 
+  test('disposing editor and buffer proxies', async () => {
+    const host = await buildClient()
+    const guest = await buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
+    hostBufferProxy.setDelegate(new FakeBufferDelegate())
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    hostEditorProxy1.setDelegate(new FakeEditorDelegate())
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    hostEditorProxy2.setDelegate(new FakeEditorDelegate())
+
+    await hostPortal.setActiveEditorProxy(hostEditorProxy1)
+
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    const guestPortalDelegate = new FakePortalDelegate()
+    guestPortal.setDelegate(guestPortalDelegate)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
+    const guestEditorProxy1 = guestPortalDelegate.getActiveEditorProxy()
+    guestEditorProxy1.setDelegate(new FakeEditorDelegate())
+
+    hostPortal.setActiveEditorProxy(hostEditorProxy2)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() !== guestEditorProxy1)
+    const guestEditorProxy2 = guestPortalDelegate.getActiveEditorProxy()
+    guestEditorProxy2.setDelegate(new FakeEditorDelegate())
+
+    assert.equal(guestEditorProxy1.bufferProxy, guestEditorProxy2.bufferProxy)
+    const guestBufferProxy = guestEditorProxy1.bufferProxy
+    guestBufferProxy.setDelegate(new FakeBufferDelegate())
+
+    hostEditorProxy1.dispose()
+    assert(hostEditorProxy1.delegate.isDisposed())
+    await condition(() => guestEditorProxy1.delegate.isDisposed())
+
+    hostEditorProxy2.dispose()
+    assert(hostEditorProxy2.delegate.isDisposed())
+    await condition(() => guestEditorProxy2.delegate.isDisposed())
+
+    assert(!hostBufferProxy.delegate.isDisposed())
+    hostBufferProxy.dispose()
+    assert(hostBufferProxy.delegate.isDisposed())
+    await condition(() => guestBufferProxy.delegate.isDisposed())
+  })
+
   suite('leaving, closing, or losing connection to a portal', () => {
     let hostPortal, hostEditorDelegate
     let guest1Portal, guest1PortalDelegate, guest1EditorDelegate
