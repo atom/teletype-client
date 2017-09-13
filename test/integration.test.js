@@ -4,6 +4,7 @@ const deepEqual = require('deep-equal')
 const FakeBufferDelegate = require('./helpers/fake-buffer-delegate')
 const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
+const condition = require('./helpers/condition')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const RealTimeClient = require('../lib/real-time-client')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
@@ -12,7 +13,7 @@ const {startTestServer} = require('@atom/real-time-server')
 let testEpoch = 0
 
 suite('Client Integration', () => {
-  let server, portals, conditionErrorMessage
+  let server, portals
 
   suiteSetup(async () => {
     const params = {databaseURL: process.env.TEST_DATABASE_URL}
@@ -30,16 +31,11 @@ suite('Client Integration', () => {
   })
 
   setup(() => {
-    conditionErrorMessage = null
     portals = []
     return server.reset()
   })
 
   teardown(async () => {
-    if (conditionErrorMessage) {
-      console.error('Condition failed with error message: ', conditionErrorMessage)
-    }
-
     for (const portal of portals) {
       await portal.dispose()
       portal.peerPool.disconnect()
@@ -350,25 +346,5 @@ suite('Client Integration', () => {
     })
     await client.initialize()
     return client
-  }
-
-  function condition (fn, message) {
-    assert(!conditionErrorMessage, 'Cannot await on multiple conditions at the same time')
-
-    conditionErrorMessage = message
-    return new Promise((resolve) => {
-      async function callback () {
-        const resultOrPromise = fn()
-        const result = (resultOrPromise instanceof Promise) ? (await resultOrPromise) : resultOrPromise
-        if (result) {
-          conditionErrorMessage = null
-          resolve()
-        } else {
-          setTimeout(callback, 5)
-        }
-      }
-
-      callback()
-    })
   }
 })
