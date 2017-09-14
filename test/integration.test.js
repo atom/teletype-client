@@ -37,7 +37,7 @@ suite('Client Integration', () => {
 
   teardown(async () => {
     for (const portal of portals) {
-      await portal.dispose()
+      portal.dispose()
       portal.peerPool.disconnect()
     }
 
@@ -330,6 +330,9 @@ suite('Client Integration', () => {
         guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
         guest3EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null
       )
+      assert(!hostEditorDelegate.isDisposed())
+      assert(!guest2EditorDelegate.isDisposed())
+      assert(!guest3EditorDelegate.isDisposed())
       assert(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
       assert(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
     })
@@ -339,17 +342,9 @@ suite('Client Integration', () => {
       hostPortal.dispose()
       await condition(() => guest1PortalDelegate.hasHostClosedPortal() && guest2PortalDelegate.hasHostClosedPortal() && guest3PortalDelegate.hasHostClosedPortal())
 
-      assert(!guest1EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
-      assert(!guest1EditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
-      assert(!guest1EditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
-
-      assert(!guest2EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
-      assert(!guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId))
-      assert(!guest2EditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
-
-      assert(!guest3EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
-      assert(!guest3EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId))
-      assert(!guest3EditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
+      assert(guest1EditorDelegate.isDisposed())
+      assert(guest2EditorDelegate.isDisposed())
+      assert(guest3EditorDelegate.isDisposed())
     })
 
     test('losing connection to guest', async () => {
