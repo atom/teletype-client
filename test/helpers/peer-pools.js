@@ -1,4 +1,5 @@
 const PeerPool = require('../../lib/peer-pool')
+const RestGateway = require('../../lib/rest-gateway')
 
 let testEpoch = 0
 const peerPools = []
@@ -7,7 +8,7 @@ exports.buildPeerPool =
 async function buildPeerPool (peerId, server) {
   const peerPool = new PeerPool({
     peerId,
-    restGateway: server.restGateway,
+    restGateway: new RestGateway({baseURL: server.address}),
     pubSubGateway: server.pubSubGateway,
     testEpoch
   })
