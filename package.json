@@ -14,7 +14,6 @@
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.4.0",
     "pusher-js": "^4.1.0",
-    "request-promise-native": "^1.0.4",
     "webrtc-adapter": "^4.2.1"
   },
   "devDependencies": {
