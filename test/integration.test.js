@@ -6,6 +6,7 @@ const Editor = require('./helpers/editor')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const RealTimeClient = require('../lib/real-time-client')
+const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
 
@@ -285,7 +286,7 @@ suite('Client Integration', () => {
 
   async function buildClient () {
     const client = new RealTimeClient({
-      restGateway: server.restGateway,
+      restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
       testEpoch
