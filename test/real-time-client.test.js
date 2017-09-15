@@ -2,7 +2,7 @@ require('./setup')
 const assert = require('assert')
 const RealTimeClient = require('../lib/real-time-client')
 
-suite.only('RealTimeClient', () => {
+suite('RealTimeClient', () => {
   suite('createPortal', () => {
     test('failure response from rest gateway', async () => {
       const stubRestGateway = {
