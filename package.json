@@ -2,7 +2,7 @@
   "name": "@atom/real-time-client",
   "version": "0.13.3",
   "description": "",
-  "main": "lib/real-time-client.js",
+  "main": "index.js",
   "scripts": {
     "test": "electron-mocha **/*.test.js --ui=tdd --renderer --enable-experimental-web-platform-features",
     "compile-protobuf": "protoc --js_out=import_style=commonjs,binary:lib real-time.proto tachyon.proto"
@@ -17,7 +17,7 @@
     "webrtc-adapter": "^4.2.1"
   },
   "devDependencies": {
-    "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/v0.12.0",
+    "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/v0.12.1",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "electron": "1.6.11",
