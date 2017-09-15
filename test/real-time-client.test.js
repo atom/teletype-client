@@ -1,5 +1,6 @@
 require('./setup')
 const assert = require('assert')
+const {PortalCreationError} = require('../lib/errors')
 const RealTimeClient = require('../lib/real-time-client')
 
 suite('RealTimeClient', () => {
@@ -18,7 +19,7 @@ suite('RealTimeClient', () => {
       } catch (e) {
         error = e
       }
-      assert.equal(error.message, 'Portal creation failed')
+      assert(error instanceof PortalCreationError)
     })
   })
 })
