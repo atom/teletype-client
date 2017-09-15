@@ -17,7 +17,7 @@
     "webrtc-adapter": "^4.2.1"
   },
   "devDependencies": {
-    "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/aeeaaaad5589d78a1bed5137e8ce654c82d71d09",
+    "@atom/real-time-server": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/real-time-server/tarball/v0.12.1",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "electron": "1.6.11",
