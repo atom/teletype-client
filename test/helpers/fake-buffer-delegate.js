@@ -4,8 +4,6 @@ module.exports =
 class Buffer {
   constructor (text, {didSetText} = {}) {
     this.text = text
-    this.textEqualityResolvers = new Map()
-    this.markers = {}
     this.didSetText = didSetText
   }
 
@@ -40,7 +38,6 @@ class Buffer {
   insert (position, text) {
     const index = characterIndexForPosition(this.text, position)
     this.text = this.text.slice(0, index) + text + this.text.slice(index)
-    this.resolveOnTextEquality()
     return [position, position, text]
   }
 
@@ -52,16 +49,7 @@ class Buffer {
     const startIndex = characterIndexForPosition(this.text, startPosition)
     const endIndex = characterIndexForPosition(this.text, endPosition)
     this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
-    this.resolveOnTextEquality()
     return [startPosition, endPosition, '']
-  }
-
-  resolveOnTextEquality () {
-    const resolvers = this.textEqualityResolvers.get(this.text) || []
-    for (const resolve of resolvers) {
-      resolve()
-    }
-    this.textEqualityResolvers.delete(this.text)
   }
 }
 
