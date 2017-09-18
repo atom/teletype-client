@@ -4,8 +4,15 @@ module.exports =
 class Buffer {
   constructor (text, {didSetText} = {}) {
     this.text = text
-    this.textEqualityResolvers = new Map()
     this.didSetText = didSetText
+  }
+
+  dispose () {
+    this.disposed = true
+  }
+
+  isDisposed () {
+    return this.disposed
   }
 
   getText () {
@@ -17,29 +24,21 @@ class Buffer {
     if (this.didSetText) this.didSetText(text)
   }
 
-  applyMany (operations) {
-    assert(Array.isArray(operations))
+  updateText (textUpdates) {
+    assert(Array.isArray(textUpdates))
 
-    for (let i = operations.length - 1; i >= 0; i--) {
-      this.apply(operations[i])
-    }
-  }
-
-  apply (operation) {
-    if (operation.type === 'delete') {
-      this.delete(operation.position, operation.extent)
-    } else if (operation.type === 'insert') {
-      this.insert(operation.position, operation.text)
-    } else {
-      throw new Error('Unknown operation type')
+    for (let i = textUpdates.length - 1; i >= 0; i--) {
+      const textUpdate = textUpdates[i]
+      const oldExtent = traversal(textUpdate.oldEnd, textUpdate.oldStart)
+      this.delete(textUpdate.oldStart, oldExtent)
+      this.insert(textUpdate.newStart, textUpdate.newText)
     }
   }
 
   insert (position, text) {
     const index = characterIndexForPosition(this.text, position)
     this.text = this.text.slice(0, index) + text + this.text.slice(index)
-    this.resolveOnTextEquality()
-    return {type: 'insert', position, text}
+    return [position, position, text]
   }
 
   delete (startPosition, extent) {
@@ -50,16 +49,7 @@ class Buffer {
     const startIndex = characterIndexForPosition(this.text, startPosition)
     const endIndex = characterIndexForPosition(this.text, endPosition)
     this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
-    this.resolveOnTextEquality()
-    return {type: 'delete', position: startPosition, extent}
-  }
-
-  resolveOnTextEquality () {
-    const resolvers = this.textEqualityResolvers.get(this.text) || []
-    for (const resolve of resolvers) {
-      resolve()
-    }
-    this.textEqualityResolvers.delete(this.text)
+    return [startPosition, endPosition, '']
   }
 }
 
@@ -76,6 +66,14 @@ function traverse (start, distance) {
     return {row: start.row, column: start.column + distance.column}
   else {
     return {row: start.row + distance.row, column: distance.column}
+  }
+}
+
+function traversal (end, start) {
+  if (end.row === start.row) {
+    return {row: 0, column: end.column - start.column}
+  } else {
+    return {row: end.row - start.row, column: end.column}
   }
 }
 

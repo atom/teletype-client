@@ -1,9 +1,10 @@
 require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
-const Buffer = require('./helpers/buffer')
-const Editor = require('./helpers/editor')
+const FakeBufferDelegate = require('./helpers/fake-buffer-delegate')
+const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
+const condition = require('./helpers/condition')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const RealTimeClient = require('../lib/real-time-client')
 const {PortalNotFoundError} = require('../lib/errors')
@@ -14,7 +15,7 @@ const {startTestServer} = require('@atom/real-time-server')
 let testEpoch = 0
 
 suite('Client Integration', () => {
-  let server, portals, conditionErrorMessage
+  let server, portals
 
   suiteSetup(async () => {
     const params = {databaseURL: process.env.TEST_DATABASE_URL}
@@ -32,18 +33,13 @@ suite('Client Integration', () => {
   })
 
   setup(() => {
-    conditionErrorMessage = null
     portals = []
     return server.reset()
   })
 
   teardown(async () => {
-    if (conditionErrorMessage) {
-      console.error('Condition failed with error message: ', conditionErrorMessage)
-    }
-
     for (const portal of portals) {
-      await portal.dispose()
+      portal.dispose()
       portal.peerPool.disconnect()
     }
 
@@ -57,123 +53,206 @@ suite('Client Integration', () => {
     const hostPortal = await host.createPortal()
 
     let hostSetTextCallCount = 0
-    const hostBuffer = new Buffer('hello world', {didSetText: () => hostSetTextCallCount++})
-    const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'uri-1', text: hostBuffer.text})
-    hostClientBuffer.setDelegate(hostBuffer)
-    hostClientBuffer.apply(hostBuffer.insert({row: 0, column: 11}, '!'))
+    const hostBufferDelegate = new FakeBufferDelegate('hello world', {didSetText: () => hostSetTextCallCount++})
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'uri-1', text: hostBufferDelegate.text})
+    hostBufferProxy.setDelegate(hostBufferDelegate)
+    hostBufferProxy.setTextInRange(...hostBufferDelegate.insert({row: 0, column: 11}, '!'))
     assert.equal(hostSetTextCallCount, 0)
 
-    const hostClientEditor = await hostPortal.createTextEditor({
-      textBuffer: hostClientBuffer,
-      selectionRanges: {
-        1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
-        2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    const hostEditorProxy = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy,
+      selections: {
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 5}}},
+        2: {range: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}
       }
     })
-    const hostEditor = new Editor()
-    hostClientEditor.setDelegate(hostEditor)
-    assert(!hostEditor.markerLayerForSiteId(1))
-    await hostPortal.setActiveTextEditor(hostClientEditor)
+    const hostEditorDelegate = new FakeEditorDelegate()
+    hostEditorProxy.setDelegate(hostEditorDelegate)
+    assert(!hostEditorDelegate.getSelectionsForSiteId(1))
+    await hostPortal.setActiveEditorProxy(hostEditorProxy)
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
 
-    const guestEditor = new Editor()
-    const guestClientEditor = guestPortalDelegate.getActiveTextEditor()
-    guestClientEditor.setDelegate(guestEditor)
+    const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+    const guestEditorDelegate = new FakeEditorDelegate()
+    guestEditorProxy.setDelegate(guestEditorDelegate)
 
-    assert.deepEqual(guestEditor.markerLayerForSiteId(1), {
-      1: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
-      2: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+    const guestBufferProxy = guestEditorProxy.bufferProxy
+    const guestBufferDelegate = new FakeBufferDelegate()
+    guestBufferProxy.setDelegate(guestBufferDelegate)
+
+    assert.deepEqual(guestEditorDelegate.getSelectionsForSiteId(1), {
+      1: {
+        range: {start: {row: 0, column: 0}, end: {row: 0, column: 5}},
+        exclusive: false,
+        reversed: false,
+        tailed: true
+      },
+      2: {
+        range: {start: {row: 0, column: 6}, end: {row: 0, column: 11}},
+        exclusive: false,
+        reversed: false,
+        tailed: true
+      }
+    })
+    assert.equal(guestBufferProxy.uri, 'uri-1')
+    assert.equal(guestBufferDelegate.getText(), 'hello world!')
+    hostBufferProxy.setTextInRange(...hostBufferDelegate.insert({row: 0, column: 5}, ' cruel'))
+    guestBufferProxy.setTextInRange(...guestBufferDelegate.delete({row: 0, column: 0}, {row: 0, column: 5}))
+    guestBufferProxy.setTextInRange(...guestBufferDelegate.insert({row: 0, column: 0}, 'goodbye'))
+
+    await condition(() => hostBufferDelegate.text === 'goodbye cruel world!')
+    await condition(() => guestBufferDelegate.text === 'goodbye cruel world!')
+
+    hostEditorProxy.updateSelections({
+      1: {
+        range: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
+      },
+      2: null
+    })
+    guestEditorProxy.updateSelections({
+      1: {
+        range: {start: {row: 0, column: 2}, end: {row: 0, column: 4}}
+      },
+      2: {
+        range: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
+      }
     })
 
-    const guestBuffer = new Buffer()
-    const guestClientBuffer = guestClientEditor.textBuffer
-    guestClientBuffer.setDelegate(guestBuffer)
-    assert.equal(guestClientBuffer.uri, 'uri-1')
-    assert.equal(guestBuffer.getText(), 'hello world!')
+    const expectedGuestSelectionsOnHost = {
+      1: {
+        range: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
+        exclusive: false,
+        reversed: false,
+        tailed: true
+      },
+      2: {
+        range: {start: {row: 0, column: 6}, end: {row: 0, column: 8}},
+        exclusive: false,
+        reversed: false,
+        tailed: true
+      }
+    }
 
-    hostClientBuffer.apply(hostBuffer.insert({row: 0, column: 5}, ' cruel'))
-    guestClientBuffer.apply(guestBuffer.delete({row: 0, column: 0}, {row: 0, column: 5}))
-    guestClientBuffer.apply(guestBuffer.insert({row: 0, column: 0}, 'goodbye'))
+    const expectedHostSelectionsOnGuest = {
+      1: {
+        range: {start: {row: 0, column: 6}, end: {row: 0, column: 11}},
+        exclusive: false,
+        reversed: false,
+        tailed: true
+      }
+    }
 
-    await condition(() => hostBuffer.text === 'goodbye cruel world!')
-    await condition(() => guestBuffer.text === 'goodbye cruel world!')
-
-    hostClientEditor.setSelectionRanges({
-      1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}
-    })
-    guestClientEditor.setSelectionRanges({
-      1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
-      2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
-    })
     await condition(() => {
       return (
-        deepEqual(guestEditor.markerLayerForSiteId(1), {1: {start: {row: 0, column: 6}, end: {row: 0, column: 11}}}) &&
-        deepEqual(hostEditor.markerLayerForSiteId(2), {1: {start: {row: 0, column: 2}, end: {row: 0, column: 4}},
-          2: {start: {row: 0, column: 6}, end: {row: 0, column: 8}}
-        })
+        deepEqual(guestEditorDelegate.getSelectionsForSiteId(1), expectedHostSelectionsOnGuest) &&
+        deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), expectedGuestSelectionsOnHost)
       )
     })
   })
 
-  test('switching a portal\'s active editor', async () => {
+  test('switching a portal\'s active editor proxy', async () => {
     const host = await buildClient()
     const guest = await buildClient()
 
     const hostPortal = await host.createPortal()
-    const hostBuffer1 = await hostPortal.createTextBuffer({uri: 'buffer-a', text: ''})
-    const hostEditor1 = await hostPortal.createTextEditor({textBuffer: hostBuffer1, selectionRanges: {}})
-    hostPortal.setActiveTextEditor(hostEditor1)
+    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selectionRanges: {}})
+    hostPortal.setActiveEditorProxy(hostEditorProxy1)
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
-    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'buffer-a')
-    const guestEditor1 = guestPortalDelegate.getActiveTextEditor()
+    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
+    const guestEditorDelegate1 = guestPortalDelegate.getActiveEditorProxy()
 
-    const hostBuffer2 = await hostPortal.createTextBuffer({uri: 'buffer-b', text: ''})
-    const hostEditor2 = await hostPortal.createTextEditor({textBuffer: hostBuffer2, selectionRanges: {}})
-    hostPortal.setActiveTextEditor(hostEditor2)
-    await condition(() => guestPortalDelegate.getActiveTextBufferURI() === 'buffer-b')
-    const guestEditor2 = guestPortalDelegate.getActiveTextEditor()
+    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selectionRanges: {}})
+    hostPortal.setActiveEditorProxy(hostEditorProxy2)
+    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-b')
+    const guestEditorDelegate2 = guestPortalDelegate.getActiveEditorProxy()
 
-    hostPortal.setActiveTextEditor(hostEditor1)
-    await condition(() => guestPortalDelegate.getActiveTextBufferURI() === 'buffer-a')
-    assert.equal(guestPortalDelegate.getActiveTextEditor(), guestEditor1)
+    hostPortal.setActiveEditorProxy(hostEditorProxy1)
+    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-a')
+    assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorDelegate1)
   })
 
-  test('closing a portal\'s active editor', async () => {
+  test('closing a portal\'s active editor proxy', async () => {
     const host = await buildClient()
     const guest = await buildClient()
 
     const hostPortal = await host.createPortal()
-    const hostBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: ''})
-    const hostEditor = await hostPortal.createTextEditor({textBuffer: hostBuffer, selectionRanges: {}})
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
+    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
     guestPortal.setDelegate(guestPortalDelegate)
-    assert(guestPortalDelegate.getActiveTextEditor() === null)
+    assert(guestPortalDelegate.getActiveEditorProxy() === null)
 
-    await hostPortal.setActiveTextEditor(hostEditor)
-    await condition(() => guestPortalDelegate.getActiveTextEditor() != null)
-    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
+    await hostPortal.setActiveEditorProxy(hostEditorProxy)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
+    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
 
-    await hostPortal.setActiveTextEditor(null)
-    await condition(() => guestPortalDelegate.getActiveTextEditor() == null)
+    await hostPortal.setActiveEditorProxy(null)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() == null)
 
-    await hostPortal.setActiveTextEditor(hostEditor)
-    await condition(() => guestPortalDelegate.getActiveTextEditor() != null)
-    assert.equal(guestPortalDelegate.getActiveTextBufferURI(), 'some-buffer')
+    await hostPortal.setActiveEditorProxy(hostEditorProxy)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
+    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
+  })
+
+  test('disposing editor and buffer proxies', async () => {
+    const host = await buildClient()
+    const guest = await buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
+    hostBufferProxy.setDelegate(new FakeBufferDelegate())
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    hostEditorProxy1.setDelegate(new FakeEditorDelegate())
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    hostEditorProxy2.setDelegate(new FakeEditorDelegate())
+
+    await hostPortal.setActiveEditorProxy(hostEditorProxy1)
+
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    const guestPortalDelegate = new FakePortalDelegate()
+    guestPortal.setDelegate(guestPortalDelegate)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
+    const guestEditorProxy1 = guestPortalDelegate.getActiveEditorProxy()
+    guestEditorProxy1.setDelegate(new FakeEditorDelegate())
+
+    hostPortal.setActiveEditorProxy(hostEditorProxy2)
+    await condition(() => guestPortalDelegate.getActiveEditorProxy() !== guestEditorProxy1)
+    const guestEditorProxy2 = guestPortalDelegate.getActiveEditorProxy()
+    guestEditorProxy2.setDelegate(new FakeEditorDelegate())
+
+    assert.equal(guestEditorProxy1.bufferProxy, guestEditorProxy2.bufferProxy)
+    const guestBufferProxy = guestEditorProxy1.bufferProxy
+    guestBufferProxy.setDelegate(new FakeBufferDelegate())
+
+    hostEditorProxy1.dispose()
+    assert(hostEditorProxy1.delegate.isDisposed())
+    await condition(() => guestEditorProxy1.delegate.isDisposed())
+
+    hostEditorProxy2.dispose()
+    assert(hostEditorProxy2.delegate.isDisposed())
+    await condition(() => guestEditorProxy2.delegate.isDisposed())
+
+    assert(!hostBufferProxy.delegate.isDisposed())
+    hostBufferProxy.dispose()
+    assert(hostBufferProxy.delegate.isDisposed())
+    await condition(() => guestBufferProxy.delegate.isDisposed())
   })
 
   suite('leaving, closing, or losing connection to a portal', () => {
-    let hostPortal, hostEditor
-    let guest1Portal, guest1PortalDelegate, guest1Editor
-    let guest2Portal, guest2PortalDelegate, guest2Editor
-    let guest3Portal, guest3PortalDelegate, guest3Editor
+    let hostPortal, hostEditorDelegate
+    let guest1Portal, guest1PortalDelegate, guest1EditorDelegate
+    let guest2Portal, guest2PortalDelegate, guest2EditorDelegate
+    let guest3Portal, guest3PortalDelegate, guest3EditorDelegate
 
     setup(async () => {
       const host = await buildClient()
@@ -194,48 +273,70 @@ suite('Client Integration', () => {
       guest3Portal = await guest3.joinPortal(hostPortal.id)
       guest3Portal.setDelegate(guest3PortalDelegate)
 
-      const hostClientBuffer = await hostPortal.createTextBuffer({uri: 'some-buffer', text: ''})
-      hostEditor = new Editor()
-      const hostClientEditor = await hostPortal.createTextEditor({textBuffer: hostClientBuffer, selectionRanges: {}})
-      hostClientEditor.setDelegate(hostEditor)
-      await hostPortal.setActiveTextEditor(hostClientEditor)
+      const hostBufferDelegate = new FakeBufferDelegate('')
+      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: hostBufferDelegate.text})
+      hostBufferProxy.setDelegate(hostBufferDelegate)
+
+      const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
+      hostEditorDelegate = new FakeEditorDelegate()
+      hostEditorProxy.setDelegate(hostEditorDelegate)
+      await hostPortal.setActiveEditorProxy(hostEditorProxy)
+
       await condition(() =>
-        guest1PortalDelegate.getActiveTextEditor() != null &&
-        guest2PortalDelegate.getActiveTextEditor() != null &&
-        guest3PortalDelegate.getActiveTextEditor() != null
+        guest1PortalDelegate.getActiveEditorProxy() != null &&
+        guest2PortalDelegate.getActiveEditorProxy() != null &&
+        guest3PortalDelegate.getActiveEditorProxy() != null
       )
 
-      const guest1ClientEditor = guest1PortalDelegate.getActiveTextEditor()
-      guest1Editor = new Editor()
-      guest1ClientEditor.setDelegate(guest1Editor)
-      guest1ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1BufferProxy = guest1EditorProxy.bufferProxy
+      const guest1BufferDelegate = new FakeBufferDelegate()
+      guest1BufferProxy.setDelegate(guest1BufferDelegate)
+      guest1EditorDelegate = new FakeEditorDelegate()
+      guest1EditorProxy.setDelegate(guest1EditorDelegate)
+      guest1EditorProxy.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
-      const guest2ClientEditor = guest2PortalDelegate.getActiveTextEditor()
-      guest2Editor = new Editor()
-      guest2ClientEditor.setDelegate(guest2Editor)
-      guest2ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2BufferProxy = guest2EditorProxy.bufferProxy
+      const guest2BufferDelegate = new FakeBufferDelegate()
+      guest2BufferProxy.setDelegate(guest2BufferDelegate)
+      guest2EditorDelegate = new FakeEditorDelegate()
+      guest2EditorProxy.setDelegate(guest2EditorDelegate)
+      guest2EditorProxy.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
-      const guest3ClientEditor = guest3PortalDelegate.getActiveTextEditor()
-      guest3Editor = new Editor()
-      guest3ClientEditor.setDelegate(guest3Editor)
-      guest3ClientEditor.setSelectionRanges({1: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}})
+      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3BufferProxy = guest3EditorProxy.bufferProxy
+      const guest3BufferDelegate = new FakeBufferDelegate()
+      guest3BufferProxy.setDelegate(guest3BufferDelegate)
+      guest3EditorDelegate = new FakeEditorDelegate()
+      guest3EditorProxy.setDelegate(guest3EditorDelegate)
+      guest3EditorProxy.updateSelections(
+        {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
+      )
 
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) != null &&
-        hostEditor.markerLayerForSiteId(guest2Portal.siteId) != null &&
-        hostEditor.markerLayerForSiteId(guest3Portal.siteId) != null
+        hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) != null &&
+        hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId) != null &&
+        hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId) != null
       )
     })
 
     test('guest leaving a portal', async () => {
       guest1Portal.dispose()
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+        hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
+        guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
+        guest3EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null
       )
-      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!hostEditorDelegate.isDisposed())
+      assert(!guest2EditorDelegate.isDisposed())
+      assert(!guest3EditorDelegate.isDisposed())
+      assert(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
+      assert(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
     })
 
     test('host closing a portal', async () => {
@@ -243,45 +344,37 @@ suite('Client Integration', () => {
       hostPortal.dispose()
       await condition(() => guest1PortalDelegate.hasHostClosedPortal() && guest2PortalDelegate.hasHostClosedPortal() && guest3PortalDelegate.hasHostClosedPortal())
 
-      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
-
-      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
-
-      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(guest1EditorDelegate.isDisposed())
+      assert(guest2EditorDelegate.isDisposed())
+      assert(guest3EditorDelegate.isDisposed())
     })
 
     test('losing connection to guest', async () => {
       guest1Portal.simulateNetworkFailure()
       await condition(() =>
-        hostEditor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest2Editor.markerLayerForSiteId(guest1Portal.siteId) == null &&
-        guest3Editor.markerLayerForSiteId(guest1Portal.siteId) == null
+        hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
+        guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
+        guest3EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null
       )
-      assert(hostEditor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(hostEditor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
+      assert(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
     })
 
     test('losing connection to host', async () => {
       hostPortal.simulateNetworkFailure()
       await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
-      assert(!guest1Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest2Portal.siteId))
-      assert(!guest1Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest1EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
+      assert(!guest1EditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
+      assert(!guest1EditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
 
-      assert(!guest2Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest2Editor.markerLayerForSiteId(guest3Portal.siteId))
+      assert(!guest2EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
+      assert(!guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId))
+      assert(!guest2EditorDelegate.getSelectionsForSiteId(guest3Portal.siteId))
 
-      assert(!guest3Editor.markerLayerForSiteId(hostPortal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest1Portal.siteId))
-      assert(!guest3Editor.markerLayerForSiteId(guest2Portal.siteId))
+      assert(!guest3EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
+      assert(!guest3EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId))
+      assert(!guest3EditorDelegate.getSelectionsForSiteId(guest2Portal.siteId))
     })
   })
 
@@ -320,25 +413,5 @@ suite('Client Integration', () => {
     })
     await client.initialize()
     return client
-  }
-
-  function condition (fn, message) {
-    assert(!conditionErrorMessage, 'Cannot await on multiple conditions at the same time')
-
-    conditionErrorMessage = message
-    return new Promise((resolve) => {
-      async function callback () {
-        const resultOrPromise = fn()
-        const result = (resultOrPromise instanceof Promise) ? (await resultOrPromise) : resultOrPromise
-        if (result) {
-          conditionErrorMessage = null
-          resolve()
-        } else {
-          setTimeout(callback, 5)
-        }
-      }
-
-      callback()
-    })
   }
 })

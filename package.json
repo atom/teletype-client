@@ -10,7 +10,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom/tachyon": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/tachyon/tarball/v0.4.3",
+    "@atom/tachyon": "https://user-with-just-readonly-access-to-realtime-repos:924792417376b236ca11cc234bcc95d306dcd1cb@api.github.com/repos/atom/tachyon/tarball/v0.5.0",
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.4.0",
     "pusher-js": "^4.1.0",
