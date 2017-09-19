@@ -4,7 +4,6 @@ const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
-const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
 suite('PeerPool', () => {
   let server
