@@ -3,6 +3,7 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
+const PeerPool = require('../lib/peer-pool')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
 
