@@ -3,6 +3,9 @@ const assert = require('assert')
 const deepEqual = require('deep-equal')
 const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
+const RestGateway = require('../lib/rest-gateway')
+const Errors = require('../lib/errors')
+const PeerPool = require('../lib/peer-pool')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 
 suite('PeerPool', () => {
@@ -71,5 +74,24 @@ suite('PeerPool', () => {
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
+  })
+
+  test('waiting too long to establish a connection to the pub-sub service', async () => {
+    const restGateway = new RestGateway({baseURL: server.address})
+    const pubSubGateway = {
+      subscribe () {
+        return new Promise((resolve) => setTimeout(resolve, 500))
+      }
+    }
+    const peerPool = new PeerPool({peerId: '1', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
+
+    let error
+    try {
+      await peerPool.initialize()
+    } catch (e) {
+      error = e
+    }
+    assert(error instanceof Errors.PubSubConnectionError)
+  })
   })
 })
