@@ -74,39 +74,4 @@ suite('PeerPool', () => {
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
   })
-
-  test('fetching and caching ICE servers', async () => {
-    const servers = [
-      {
-        url: 'some-url',
-        username: 'some-username',
-        credential: 'some-credential'
-      }
-    ]
-
-    let apiRequestCount = 0
-    const stubRestGateway = {
-      get: async function (url) {
-        apiRequestCount++
-        const headers = new Headers({
-          'Expires': new Date(Date.now() + 100).toUTCString()
-        })
-        return {
-          body: servers,
-          ok: true,
-          headers
-        }
-      }
-    }
-
-    const peerPool = new PeerPool({restGateway: stubRestGateway})
-
-    // initial request fetches ICE servers from Rest API
-    assert.deepEqual(await peerPool.getICEServers(), servers)
-    assert.equal(apiRequestCount, 1)
-
-    // subsequent requests fetch ICE servers from cache
-    assert.deepEqual(await peerPool.getICEServers(), servers)
-    assert.equal(apiRequestCount, 1)
-  })
 })
