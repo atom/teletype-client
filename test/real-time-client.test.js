@@ -11,7 +11,7 @@ suite('RealTimeClient', () => {
           return new Promise(() => {})
         }
       }
-      const client = new RealTimeClient({pubSubGateway, timeoutInMilliseconds: 100})
+      const client = new RealTimeClient({pubSubGateway, connectionTimeout: 100})
 
       let error
       try {
