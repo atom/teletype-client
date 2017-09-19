@@ -6,8 +6,7 @@ const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const condition = require('./helpers/condition')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
-const RealTimeClient = require('../lib/real-time-client')
-const {PortalNotFoundError} = require('../lib/errors')
+const {RealTimeClient, Errors} = require('..')
 const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
@@ -389,7 +388,7 @@ suite('Client Integration', () => {
       } catch (e) {
         exception = e
       }
-      assert(exception instanceof PortalNotFoundError)
+      assert(exception instanceof Errors.PortalNotFoundError)
     }
 
     // Malformed Portal ID.
@@ -400,7 +399,7 @@ suite('Client Integration', () => {
       } catch (e) {
         exception = e
       }
-      assert(exception instanceof PortalNotFoundError)
+      assert(exception instanceof Errors.PortalNotFoundError)
     }
   })
 
