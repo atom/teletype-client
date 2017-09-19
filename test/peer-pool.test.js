@@ -105,13 +105,15 @@ suite('PeerPool', () => {
 
   test('waiting too long to establish a connection to another peer', async () => {
     const restGateway = new RestGateway({baseURL: server.address})
+    const subscribeRequests = []
     const pubSubGateway = {
       subscribe () {
+        subscribeRequests.push(arguments)
         return Promise.resolve()
       }
     }
-    const peer1Pool = new PeerPool({peerId: '1', timeoutInMilliseconds: 250, restGateway, pubSubGateway})
-    const peer2Pool = new PeerPool({peerId: '2', timeoutInMilliseconds: 250, restGateway, pubSubGateway})
+    const peer1Pool = new PeerPool({peerId: '1', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
+    const peer2Pool = new PeerPool({peerId: '2', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
 
     let error
@@ -121,5 +123,19 @@ suite('PeerPool', () => {
       error = e
     }
     assert(error instanceof Errors.PeerConnectionError)
+
+    // Ensure the connection can be established later if the error resolves
+    // itself. To do so, we will forward all the subscribe requests received so
+    // far to the server's pub sub gateway, so that the two peers can
+    // communicate with each other.
+    for (const subscribeRequest of subscribeRequests) {
+      server.pubSubGateway.subscribe(...subscribeRequest)
+    }
+    peer1Pool.timeoutInMilliseconds = 2000
+    peer2Pool.timeoutInMilliseconds = 2000
+
+    await peer1Pool.connectTo('2')
+    await peer1Pool.getConnectedPromise('2')
+    await peer2Pool.getConnectedPromise('1')
   })
 })
