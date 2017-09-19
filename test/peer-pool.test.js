@@ -78,9 +78,15 @@ suite('PeerPool', () => {
 
   test('waiting too long to establish a connection to the pub-sub service', async () => {
     const restGateway = new RestGateway({baseURL: server.address})
+    const subscription = {
+      disposed: false,
+      dispose () {
+        this.disposed = true
+      }
+    }
     const pubSubGateway = {
       subscribe () {
-        return new Promise((resolve) => setTimeout(resolve, 500))
+        return new Promise((resolve) => setTimeout(() => { resolve(subscription) }, 150))
       }
     }
     const peerPool = new PeerPool({peerId: '1', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
@@ -92,6 +98,9 @@ suite('PeerPool', () => {
       error = e
     }
     assert(error instanceof Errors.PubSubConnectionError)
+
+    // Ensure the subscription gets disposed when its promise finally resolves.
+    await condition(() => subscription.disposed)
   })
 
   test('waiting too long to establish a connection to another peer', async () => {
