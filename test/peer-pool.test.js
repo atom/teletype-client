@@ -93,5 +93,24 @@ suite('PeerPool', () => {
     }
     assert(error instanceof Errors.PubSubConnectionError)
   })
+
+  test('waiting too long to establish a connection to another peer', async () => {
+    const restGateway = new RestGateway({baseURL: server.address})
+    const pubSubGateway = {
+      subscribe () {
+        return Promise.resolve()
+      }
+    }
+    const peer1Pool = new PeerPool({peerId: '1', timeoutInMilliseconds: 250, restGateway, pubSubGateway})
+    const peer2Pool = new PeerPool({peerId: '2', timeoutInMilliseconds: 250, restGateway, pubSubGateway})
+    await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
+
+    let error
+    try {
+      await peer1Pool.connectTo('2')
+    } catch (e) {
+      error = e
+    }
+    assert(error instanceof Errors.PeerConnectionError)
   })
 })
