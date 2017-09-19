@@ -410,7 +410,9 @@ suite('Client Integration', () => {
       didCreateOrJoinPortal: (portal) => portals.push(portal),
       testEpoch
     })
-    await client.initialize()
+    // Ensure we don't blow up if we call `initialize` a second time before
+    // finishing initialization.
+    await Promise.all([client.initialize(), client.initialize()])
     return client
   }
 })
