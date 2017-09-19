@@ -89,7 +89,7 @@ suite('PeerPool', () => {
         return new Promise((resolve) => setTimeout(() => { resolve(subscription) }, 150))
       }
     }
-    const peerPool = new PeerPool({peerId: '1', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
+    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
 
     let error
     try {
@@ -112,8 +112,8 @@ suite('PeerPool', () => {
         return Promise.resolve()
       }
     }
-    const peer1Pool = new PeerPool({peerId: '1', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
-    const peer2Pool = new PeerPool({peerId: '2', timeoutInMilliseconds: 100, restGateway, pubSubGateway})
+    const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
+    const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
 
     let error
@@ -131,8 +131,8 @@ suite('PeerPool', () => {
     for (const subscribeRequest of subscribeRequests) {
       server.pubSubGateway.subscribe(...subscribeRequest)
     }
-    peer1Pool.timeoutInMilliseconds = 2000
-    peer2Pool.timeoutInMilliseconds = 2000
+    peer1Pool.connectionTimeout = 2000
+    peer2Pool.connectionTimeout = 2000
 
     await peer1Pool.connectTo('2')
     await peer1Pool.getConnectedPromise('2')
