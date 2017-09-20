@@ -24,7 +24,7 @@ suite('RealTimeClient', () => {
   })
 
   suite('createPortal', () => {
-    test('throws a PortalCreationError when posting the portal to the server fails', async () => {
+    test('throws if posting the portal to the server fails', async () => {
       const stubRestGateway = {}
       const client = new RealTimeClient({restGateway: stubRestGateway})
 
@@ -52,6 +52,39 @@ suite('RealTimeClient', () => {
           error = e
         }
         assert(error instanceof Errors.PortalCreationError)
+      }
+    })
+  })
+
+  suite('joinPortal', () => {
+    test('throws if retrieving the portal from the server fails', async () => {
+      const stubRestGateway = {}
+      const client = new RealTimeClient({restGateway: stubRestGateway})
+
+      {
+        let error
+        try {
+          stubRestGateway.get = function () {
+            throw new Error('Failed to fetch')
+          }
+          await client.joinPortal('1')
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.PortalJoinError)
+      }
+
+      {
+        let error
+        try {
+          stubRestGateway.get = function () {
+            return Promise.resolve({ok: false, body: {}})
+          }
+          await client.joinPortal('1')
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.PortalNotFoundError)
       }
     })
   })
