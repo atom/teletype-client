@@ -24,21 +24,35 @@ suite('RealTimeClient', () => {
   })
 
   suite('createPortal', () => {
-    test('failure response from rest gateway', async () => {
-      const stubRestGateway = {
-        post: (url, body) => {
-          return Promise.resolve({ ok: false, body: {} })
-        }
-      }
+    test('throws a PortalCreationError when posting the portal to the server fails', async () => {
+      const stubRestGateway = {}
       const client = new RealTimeClient({restGateway: stubRestGateway})
 
-      let error
-      try {
-        await client.createPortal()
-      } catch (e) {
-        error = e
+      {
+        let error
+        try {
+          stubRestGateway.post = function () {
+            throw new Error('Failed to fetch')
+          }
+          await client.createPortal()
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.PortalCreationError)
       }
-      assert(error instanceof Errors.PortalCreationError)
+
+      {
+        let error
+        try {
+          stubRestGateway.post = function () {
+            return Promise.resolve({ok: false, body: {}})
+          }
+          await client.createPortal()
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.PortalCreationError)
+      }
     })
   })
 })
