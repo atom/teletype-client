@@ -1,7 +1,7 @@
 const StarOverlayNetwork = require('../../lib/star-overlay-network')
 
 module.exports =
-function buildStarNetwork (id, peerPool, isHub, connectionTimeout) {
+function buildStarNetwork (id, peerPool, {isHub, connectionTimeout}={}) {
   const network = new StarOverlayNetwork({id, peerPool, isHub, connectionTimeout})
 
   network.testJoinEvents = []

@@ -35,16 +35,16 @@ suite('StarOverlayNetwork', () => {
       const spoke2Pool = await buildPeerPool('spoke-2', server)
       const spoke3Pool = await buildPeerPool('spoke-3', server)
 
-      const hub = buildStarNetwork('network', hubPool, true)
+      const hub = buildStarNetwork('network', hubPool, {isHub: true})
       assert.deepEqual(hub.getMembers(), new Set(['hub']))
 
-      const spoke1 = buildStarNetwork('network', spoke1Pool, false)
+      const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
       assert.deepEqual(spoke1.getMembers(), new Set(['spoke-1']))
 
-      const spoke2 = buildStarNetwork('network', spoke2Pool, false)
+      const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
       assert.deepEqual(spoke2.getMembers(), new Set(['spoke-2']))
 
-      const spoke3 = buildStarNetwork('network', spoke3Pool, false)
+      const spoke3 = buildStarNetwork('network', spoke3Pool, {isHub: false})
       assert.deepEqual(spoke3.getMembers(), new Set(['spoke-3']))
 
       spoke1.connectTo('hub')
@@ -117,10 +117,10 @@ suite('StarOverlayNetwork', () => {
       const spoke2Pool = await buildPeerPool('spoke-2', server)
       const spoke3Pool = await buildPeerPool('spoke-3', server)
 
-      const hub = buildStarNetwork('network', hubPool, true)
-      const spoke1 = buildStarNetwork('network', spoke1Pool, false)
-      const spoke2 = buildStarNetwork('network', spoke2Pool, false)
-      const spoke3 = buildStarNetwork('network', spoke3Pool, false)
+      const hub = buildStarNetwork('network', hubPool, {isHub: true})
+      const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
+      const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
+      const spoke3 = buildStarNetwork('network', spoke3Pool, {isHub: false})
       await spoke1.connectTo('hub')
       await spoke2.connectTo('hub')
       await spoke3.connectTo('hub')
@@ -168,9 +168,9 @@ suite('StarOverlayNetwork', () => {
       const spoke1Pool = await buildPeerPool('spoke-1', server)
       const spoke2Pool = await buildPeerPool('spoke-2', server)
 
-      const hub = buildStarNetwork('network-a', hubPool, true)
-      const spoke1 = buildStarNetwork('network-a', spoke1Pool, false)
-      const spoke2 = buildStarNetwork('network-a', spoke2Pool, false)
+      const hub = buildStarNetwork('network-a', hubPool, {isHub: true})
+      const spoke1 = buildStarNetwork('network-a', spoke1Pool, {isHub: false})
+      const spoke2 = buildStarNetwork('network-a', spoke2Pool, {isHub: false})
       await spoke1.connectTo('hub')
       await spoke2.connectTo('hub')
 
@@ -194,8 +194,8 @@ suite('StarOverlayNetwork', () => {
       const spoke1Pool = await buildPeerPool('spoke-1', server)
       const spoke2Pool = await buildPeerPool('spoke-2', server)
 
-      const hub = buildStarNetwork('network-a', hubPool, true)
-      const spoke = buildStarNetwork('network-a', spoke1Pool, false)
+      const hub = buildStarNetwork('network-a', hubPool, {isHub: true})
+      const spoke = buildStarNetwork('network-a', spoke1Pool, {isHub: false})
       await spoke.connectTo('hub')
       await hubPool.connectTo('spoke-2')
 
@@ -214,21 +214,21 @@ suite('StarOverlayNetwork', () => {
       const peer3Pool = await buildPeerPool('peer-3', server)
       const peer4Pool = await buildPeerPool('peer-4', server)
 
-      const hubA = buildStarNetwork('network-a', peer1Pool, true)
-      const spokeA1 = buildStarNetwork('network-a', peer2Pool, false)
-      const spokeA2 = buildStarNetwork('network-a', peer3Pool, false)
+      const hubA = buildStarNetwork('network-a', peer1Pool, {isHub: true})
+      const spokeA1 = buildStarNetwork('network-a', peer2Pool, {isHub: false})
+      const spokeA2 = buildStarNetwork('network-a', peer3Pool, {isHub: false})
       await spokeA1.connectTo('peer-1')
       await spokeA2.connectTo('peer-1')
 
-      const hubB = buildStarNetwork('network-b', peer1Pool, true)
-      const spokeB1 = buildStarNetwork('network-b', peer2Pool, false)
-      const spokeB2 = buildStarNetwork('network-b', peer3Pool, false)
+      const hubB = buildStarNetwork('network-b', peer1Pool, {isHub: true})
+      const spokeB1 = buildStarNetwork('network-b', peer2Pool, {isHub: false})
+      const spokeB2 = buildStarNetwork('network-b', peer3Pool, {isHub: false})
       await spokeB1.connectTo('peer-1')
       await spokeB2.connectTo('peer-1')
 
-      const hubC = buildStarNetwork('network-c', peer2Pool, true)
-      const spokeC1 = buildStarNetwork('network-c', peer1Pool, false)
-      const spokeC2 = buildStarNetwork('network-c', peer3Pool, false)
+      const hubC = buildStarNetwork('network-c', peer2Pool, {isHub: true})
+      const spokeC1 = buildStarNetwork('network-c', peer1Pool, {isHub: false})
+      const spokeC2 = buildStarNetwork('network-c', peer3Pool, {isHub: false})
       await spokeC1.connectTo('peer-2')
       await spokeC2.connectTo('peer-2')
 
@@ -269,9 +269,9 @@ suite('StarOverlayNetwork', () => {
       const spoke2Pool = await buildPeerPool('spoke-2', server)
       const nonMemberPool = await buildPeerPool('non-member', server)
 
-      const hub = buildStarNetwork('some-network-id', hubPool, true)
-      const spoke1 = buildStarNetwork('some-network-id', spoke1Pool, false)
-      const spoke2 = buildStarNetwork('some-network-id', spoke2Pool, false)
+      const hub = buildStarNetwork('some-network-id', hubPool, {isHub: true})
+      const spoke1 = buildStarNetwork('some-network-id', spoke1Pool, {isHub: false})
+      const spoke2 = buildStarNetwork('some-network-id', spoke2Pool, {isHub: false})
       await spoke1.connectTo('hub')
       await spoke2.connectTo('hub')
       await nonMemberPool.connectTo('hub')
@@ -309,15 +309,25 @@ suite('StarOverlayNetwork', () => {
 
   test('throws when connecting to a network exceeds the connection timeout', async () => {
     const hubPool = await buildPeerPool('hub', server)
-    const spokePool = await buildPeerPool('spoke', server)
-    const spokeNetwork = buildStarNetwork('network', spokePool, false, 100)
+    const spoke1Pool = await buildPeerPool('spoke-1', server)
+    const hub = buildStarNetwork('network', hubPool, {isHub: true, connectionTimeout: 1000})
+    const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false, connectionTimeout: 1})
 
     let error
     try {
-      await spokeNetwork.connectTo('hub')
+      await spoke1.connectTo('hub')
     } catch (e) {
       error = e
     }
     assert(error instanceof Errors.NetworkConnectionError)
+
+    // Simulate receiving a connection from another peer, ensuring the peer that
+    // timed out is not included in the members list.
+    const spoke2Pool = await buildPeerPool('spoke-2', server)
+    const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false, connectionTimeout: 1000})
+    await spoke2.connectTo('hub')
+    assert(setEqual(hub.getMembers(), ['hub', 'spoke-2']))
+    assert(setEqual(spoke1.getMembers(), ['spoke-1']))
+    assert(setEqual(spoke2.getMembers(), ['hub', 'spoke-2']))
   })
 })
