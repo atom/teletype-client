@@ -36,16 +36,16 @@ suite('StarOverlayNetwork', () => {
       const spoke3Pool = await buildPeerPool('spoke-3', server)
 
       const hub = buildStarNetwork('network', hubPool, {isHub: true})
-      assert.deepEqual(hub.getMembers(), new Set(['hub']))
+      assert(setEqual(hub.getMembers(), ['hub']))
 
       const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
-      assert.deepEqual(spoke1.getMembers(), new Set(['spoke-1']))
+      assert(setEqual(spoke1.getMembers(), ['spoke-1']))
 
       const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
-      assert.deepEqual(spoke2.getMembers(), new Set(['spoke-2']))
+      assert(setEqual(spoke2.getMembers(), ['spoke-2']))
 
       const spoke3 = buildStarNetwork('network', spoke3Pool, {isHub: false})
-      assert.deepEqual(spoke3.getMembers(), new Set(['spoke-3']))
+      assert(setEqual(spoke3.getMembers(), ['spoke-3']))
 
       spoke1.connectTo('hub')
       await condition(() => (
