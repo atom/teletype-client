@@ -89,7 +89,7 @@ suite('RealTimeClient', () => {
     })
   })
 
-  suite('onError', () => {
+  suite('onConnectionError', () => {
     test('fires if the underlying PeerPool emits an error', async () => {
       const stubRestGateway = {
         get () {
@@ -104,7 +104,7 @@ suite('RealTimeClient', () => {
       }
       const errorEvents = []
       const client = new RealTimeClient({pubSubGateway: stubPubSubGateway, restGateway: stubRestGateway})
-      client.onError((error) => errorEvents.push(error))
+      client.onConnectionError((error) => errorEvents.push(error))
       await client.initialize()
 
       const errorEvent1 = new ErrorEvent('')
