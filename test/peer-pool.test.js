@@ -138,4 +138,26 @@ suite('PeerPool', () => {
     await peer1Pool.getConnectedPromise('2')
     await peer2Pool.getConnectedPromise('1')
   })
+
+  test('RTCPeerConnection and RTCDataChannel error events', async () => {
+    const peer1Pool = await buildPeerPool('1', server)
+    const peer2Pool = await buildPeerPool('2', server)
+    const peer3Pool = await buildPeerPool('3', server)
+    await peer1Pool.connectTo('2')
+    await peer1Pool.connectTo('3')
+    const peerConnection1 = peer1Pool.getPeerConnection('2')
+    const peerConnection2 = peer1Pool.getPeerConnection('3')
+
+    const errorEvent1 = new ErrorEvent('')
+    peerConnection1.rtcPeerConnection.onerror(errorEvent1)
+    assert.deepEqual(peer1Pool.testErrors, [errorEvent1])
+
+    const errorEvent2 = new ErrorEvent('')
+    peerConnection2.rtcPeerConnection.onerror(errorEvent2)
+    assert.deepEqual(peer1Pool.testErrors, [errorEvent1, errorEvent2])
+
+    const errorEvent3 = new ErrorEvent('')
+    peerConnection1.channel.onerror(errorEvent3)
+    assert.deepEqual(peer1Pool.testErrors, [errorEvent1, errorEvent2, errorEvent3])
+  })
 })

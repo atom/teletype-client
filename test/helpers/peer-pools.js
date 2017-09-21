@@ -27,6 +27,11 @@ async function buildPeerPool (peerId, server) {
     })
   })
 
+  peerPool.testErrors = []
+  peerPool.onError((error) => {
+    peerPool.testErrors.push(error)
+  })
+
   peerPools.push(peerPool)
 
   return peerPool

@@ -88,4 +88,32 @@ suite('RealTimeClient', () => {
       }
     })
   })
+
+  suite('onError', () => {
+    test('fires if the underlying PeerPool emits an error', async () => {
+      const stubRestGateway = {
+        get () {
+          return Promise.resolve({ok: true, body: []})
+        }
+      }
+      const stubPubSubGateway = {
+        getClientId () {
+          return Promise.resolve('')
+        },
+        subscribe () {}
+      }
+      const errorEvents = []
+      const client = new RealTimeClient({pubSubGateway: stubPubSubGateway, restGateway: stubRestGateway})
+      client.onError((error) => errorEvents.push(error))
+      await client.initialize()
+
+      const errorEvent1 = new ErrorEvent('')
+      client.peerPool.emitter.emit('error', errorEvent1)
+      assert.deepEqual(errorEvents, [errorEvent1])
+
+      const errorEvent2 = new ErrorEvent('')
+      client.peerPool.emitter.emit('error', errorEvent2)
+      assert.deepEqual(errorEvents, [errorEvent1, errorEvent2])
+    })
+  })
 })
