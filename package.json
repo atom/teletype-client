@@ -1,6 +1,6 @@
 {
   "name": "@atom/real-time-client",
-  "version": "0.15.3",
+  "version": "0.15.4",
   "description": "",
   "main": "index.js",
   "scripts": {
