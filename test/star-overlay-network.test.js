@@ -7,6 +7,7 @@ const condition = require('./helpers/condition')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
 const getExampleMediaStream = require('./helpers/get-example-media-stream')
+const Errors = require('../lib/errors')
 
 suite('StarOverlayNetwork', () => {
   let server
@@ -304,5 +305,19 @@ suite('StarOverlayNetwork', () => {
         {senderId: 'hub', message: 'direct message'}
       ]))
     })
+  })
+
+  test('throws when connecting to a network exceeds the connection timeout', async () => {
+    const hubPool = await buildPeerPool('hub', server)
+    const spokePool = await buildPeerPool('spoke', server)
+    const spokeNetwork = buildStarNetwork('network', spokePool, false, 100)
+
+    let error
+    try {
+      await spokeNetwork.connectTo('hub')
+    } catch (e) {
+      error = e
+    }
+    assert(error instanceof Errors.NetworkConnectionError)
   })
 })
