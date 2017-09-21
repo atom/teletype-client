@@ -321,8 +321,9 @@ suite('StarOverlayNetwork', () => {
     }
     assert(error instanceof Errors.NetworkConnectionError)
 
-    // Simulate receiving a connection from another peer, ensuring the peer that
-    // timed out is not included in the members list.
+    // The spoke that timed out may be able to connect to the hub eventually.
+    // Here we simulate receiving a connection from another spoke, ensuring that
+    // the spoke that timed out is not included in the members list.
     const spoke2Pool = await buildPeerPool('spoke-2', server)
     const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false, connectionTimeout: 1000})
     await spoke2.connectTo('hub')
