@@ -5,13 +5,43 @@ const RealTimeClient = require('../lib/real-time-client')
 
 suite('RealTimeClient', () => {
   suite('initialize', () => {
-    test('waiting too long to retrieve the client id from the pub-sub gateway', async () => {
-      const pubSubGateway = {
+    test('throws when the protocol version is out of date according to the server', async () => {
+      const stubRestGateway = {
+        get: (url) => {
+          if (url === '/protocol-version')
+          return {ok: true, body: {version: 99999}}
+        }
+      }
+      const client = new RealTimeClient({
+        restGateway: stubRestGateway,
+        pubSubGateway: {}
+      })
+
+      let error
+      try {
+        await client.initialize()
+      } catch (e) {
+        error = e
+      }
+      assert(error instanceof Errors.ClientOutOfDateError)
+    })
+
+    test('throws when retrieving the client id from the pub-sub gateway exceeds the connection timeout', async () => {
+      const stubRestGateway = {
+        get: (url) => {
+          return {ok: false}
+        }
+      }
+      const stubPubSubGateway = {
         getClientId () {
           return new Promise(() => {})
         }
       }
-      const client = new RealTimeClient({pubSubGateway, connectionTimeout: 100})
+      const client = new RealTimeClient({
+        pubSubGateway: stubPubSubGateway,
+        restGateway: stubRestGateway,
+        connectionTimeout: 100
+      })
 
       let error
       try {
