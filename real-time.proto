@@ -73,23 +73,23 @@ message NetworkMessage {
   string network_id = 1;
 
   oneof variant {
-    StarConnection star_connection = 2;
-    StarConnectionAck star_connection_ack = 3;
-    StarDisconnection star_disconnection = 4;
+    StarJoinRequest star_join_request = 2;
+    StarJoinResponse star_join_response = 3;
+    StarLeaveNotification star_leave_notification = 4;
     StarUnicast star_unicast = 5;
     StarBroadcast star_broadcast = 6;
   }
 
-  message StarConnection {
+  message StarJoinRequest {
     string sender_id = 1;
   }
 
-  message StarConnectionAck {
+  message StarJoinResponse {
     repeated string member_ids = 1;
   }
 
-  message StarDisconnection {
-    string sender_id = 1;
+  message StarLeaveNotification {
+    string member_id = 1;
     bool connection_lost = 2;
   }
 
