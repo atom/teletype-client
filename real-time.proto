@@ -75,9 +75,10 @@ message NetworkMessage {
   oneof variant {
     StarJoinRequest star_join_request = 2;
     StarJoinResponse star_join_response = 3;
-    StarLeaveNotification star_leave_notification = 4;
-    StarUnicast star_unicast = 5;
-    StarBroadcast star_broadcast = 6;
+    StarJoinNotification star_join_notification = 4;
+    StarLeaveNotification star_leave_notification = 5;
+    StarUnicast star_unicast = 6;
+    StarBroadcast star_broadcast = 7;
   }
 
   message StarJoinRequest {
@@ -86,6 +87,10 @@ message NetworkMessage {
 
   message StarJoinResponse {
     repeated string member_ids = 1;
+  }
+
+  message StarJoinNotification {
+    string member_id = 1;
   }
 
   message StarLeaveNotification {
