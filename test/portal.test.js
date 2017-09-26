@@ -1,8 +1,11 @@
 const assert = require('assert')
-const Portal = require('../lib/portal')
 const {Disposable} = require('event-kit')
 const {startTestServer} = require('@atom/real-time-server')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
+const condition = require('./helpers/condition')
+const setEqual = require('./helpers/set-equal')
+const FakePortalDelegate = require('./helpers/fake-portal-delegate')
+const Portal = require('../lib/portal')
 
 suite('Portal', () => {
   let server
@@ -41,4 +44,54 @@ suite('Portal', () => {
       assert(portal.disposed)
     })
   })
+
+  test('joining and leaving a portal', async () => {
+    const hostPeerPool = await buildPeerPool('host', server)
+    const guest1PeerPool = await buildPeerPool('guest1', server)
+    const guest2PeerPool = await buildPeerPool('guest2', server)
+
+    const hostPortal = buildPortal('portal', hostPeerPool)
+    const guest1Portal = buildPortal('portal', guest1PeerPool, 'host')
+    const guest2Portal = buildPortal('portal', guest2PeerPool, 'host')
+    await guest1Portal.join()
+    await guest2Portal.join()
+
+    assert(setEqual(hostPortal.getActiveSiteIds(), [1, 2, 3]))
+    assert(setEqual(guest1Portal.getActiveSiteIds(), [1, 2, 3]))
+    assert(setEqual(guest2Portal.getActiveSiteIds(), [1, 2, 3]))
+
+    assert.deepEqual(hostPortal.testDelegate.joinEvents, [2, 3])
+    assert.deepEqual(guest1Portal.testDelegate.joinEvents, [3])
+    assert.deepEqual(guest2Portal.testDelegate.joinEvents, [])
+
+    guest1Portal.dispose()
+    await condition(() => (
+      setEqual(hostPortal.getActiveSiteIds(), [1, 3]) &&
+      setEqual(guest1Portal.getActiveSiteIds(), [2]) &&
+      setEqual(guest2Portal.getActiveSiteIds(), [1, 3])
+    ))
+
+    assert.deepEqual(hostPortal.testDelegate.leaveEvents, [2])
+    assert.deepEqual(guest1Portal.testDelegate.leaveEvents, [])
+    assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2])
+
+    hostPortal.dispose()
+    await condition(() => (
+      setEqual(hostPortal.getActiveSiteIds(), [1]) &&
+      setEqual(guest1Portal.getActiveSiteIds(), [2]) &&
+      setEqual(guest2Portal.getActiveSiteIds(), [3])
+    ))
+
+    assert.deepEqual(hostPortal.testDelegate.leaveEvents, [2])
+    assert.deepEqual(guest1Portal.testDelegate.leaveEvents, [])
+    assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2, 1])
+  })
+
+  function buildPortal (portalId, peerPool, hostPeerId) {
+    const siteId = hostPeerId == null ? 1 : null
+    const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
+    portal.testDelegate = new FakePortalDelegate()
+    portal.setDelegate(portal.testDelegate)
+    return portal
+  }
 })
