@@ -11,6 +11,9 @@ suite('Portal', () => {
         },
         onReceive () {
           return new Disposable(() => {})
+        },
+        getPeerIdentity () {
+          return {}
         }
       }
       const portal = new Portal({id: 'id', hostPeerId: 'host', siteId: 2, peerPool: stubPeerPool})

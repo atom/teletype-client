@@ -403,8 +403,10 @@ suite('Client Integration', () => {
     }
   })
 
+  let tokenCount = 0
   async function buildClient () {
     const client = new RealTimeClient({
+      oauthToken: 'token-' + tokenCount++,
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),

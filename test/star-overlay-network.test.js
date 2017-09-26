@@ -36,21 +36,21 @@ suite('StarOverlayNetwork', () => {
       const spoke3Pool = await buildPeerPool('spoke-3', server)
 
       const hub = buildStarNetwork('network', hubPool, {isHub: true})
-      assert(setEqual(hub.getMembers(), ['hub']))
+      assert(setEqual(hub.getMemberIds(), ['hub']))
 
       const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
-      assert(setEqual(spoke1.getMembers(), ['spoke-1']))
+      assert(setEqual(spoke1.getMemberIds(), ['spoke-1']))
 
       const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
-      assert(setEqual(spoke2.getMembers(), ['spoke-2']))
+      assert(setEqual(spoke2.getMemberIds(), ['spoke-2']))
 
       const spoke3 = buildStarNetwork('network', spoke3Pool, {isHub: false})
-      assert(setEqual(spoke3.getMembers(), ['spoke-3']))
+      assert(setEqual(spoke3.getMemberIds(), ['spoke-3']))
 
       spoke1.connectTo('hub')
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub', 'spoke-1']) &&
-        setEqual(spoke1.getMembers(), ['hub', 'spoke-1'])
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-1']) &&
+        setEqual(spoke1.getMemberIds(), ['hub', 'spoke-1'])
       ))
       assert.deepEqual(hub.testJoinEvents, ['spoke-1'])
       assert.deepEqual(spoke1.testJoinEvents, [])
@@ -59,9 +59,9 @@ suite('StarOverlayNetwork', () => {
 
       spoke2.connectTo('hub')
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-2']) &&
-        setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-2']) &&
-        setEqual(spoke2.getMembers(), ['hub', 'spoke-1', 'spoke-2'])
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-1', 'spoke-2']) &&
+        setEqual(spoke1.getMemberIds(), ['hub', 'spoke-1', 'spoke-2']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-1', 'spoke-2'])
       ))
       assert.deepEqual(hub.testJoinEvents, ['spoke-1', 'spoke-2'])
       assert.deepEqual(spoke1.testJoinEvents, ['spoke-2'])
@@ -70,10 +70,10 @@ suite('StarOverlayNetwork', () => {
 
       spoke3.connectTo('hub')
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
-        setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
-        setEqual(spoke2.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
-        setEqual(spoke3.getMembers(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3'])
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+        setEqual(spoke1.getMemberIds(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3']) &&
+        setEqual(spoke3.getMemberIds(), ['hub', 'spoke-1', 'spoke-2', 'spoke-3'])
       ))
       assert.deepEqual(hub.testJoinEvents, ['spoke-1', 'spoke-2', 'spoke-3'])
       assert.deepEqual(spoke1.testJoinEvents, ['spoke-2', 'spoke-3'])
@@ -82,10 +82,10 @@ suite('StarOverlayNetwork', () => {
 
       spoke2.disconnect()
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub', 'spoke-1', 'spoke-3']) &&
-        setEqual(spoke1.getMembers(), ['hub', 'spoke-1', 'spoke-3']) &&
-        setEqual(spoke2.getMembers(), ['spoke-2']) &&
-        setEqual(spoke3.getMembers(), ['hub', 'spoke-1', 'spoke-3'])
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-1', 'spoke-3']) &&
+        setEqual(spoke1.getMemberIds(), ['hub', 'spoke-1', 'spoke-3']) &&
+        setEqual(spoke2.getMemberIds(), ['spoke-2']) &&
+        setEqual(spoke3.getMemberIds(), ['hub', 'spoke-1', 'spoke-3'])
       ))
       assert.deepEqual(hub.testLeaveEvents, [{peerId: 'spoke-2', connectionLost: false}])
       assert.deepEqual(spoke1.testLeaveEvents, [{peerId: 'spoke-2', connectionLost: false}])
@@ -94,10 +94,10 @@ suite('StarOverlayNetwork', () => {
 
       hub.disconnect()
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub']) &&
-        setEqual(spoke1.getMembers(), ['spoke-1']) &&
-        setEqual(spoke2.getMembers(), ['spoke-2']) &&
-        setEqual(spoke3.getMembers(), ['spoke-3'])
+        setEqual(hub.getMemberIds(), ['hub']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['spoke-2']) &&
+        setEqual(spoke3.getMemberIds(), ['spoke-3'])
       ))
       assert.deepEqual(hub.testLeaveEvents, [{peerId: 'spoke-2', connectionLost: false}])
       assert.deepEqual(spoke1.testLeaveEvents, [
@@ -127,10 +127,10 @@ suite('StarOverlayNetwork', () => {
 
       spoke1Pool.disconnect()
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub', 'spoke-2', 'spoke-3']) &&
-        setEqual(spoke1.getMembers(), ['spoke-1']) &&
-        setEqual(spoke2.getMembers(), ['hub', 'spoke-2', 'spoke-3']) &&
-        setEqual(spoke3.getMembers(), ['hub', 'spoke-2', 'spoke-3'])
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-2', 'spoke-3']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-2', 'spoke-3']) &&
+        setEqual(spoke3.getMemberIds(), ['hub', 'spoke-2', 'spoke-3'])
       ))
       assert.deepEqual(hub.testLeaveEvents, [{peerId: 'spoke-1', connectionLost: true}])
       assert.deepEqual(spoke1.testLeaveEvents, [{peerId: 'hub', connectionLost: true}])
@@ -139,10 +139,10 @@ suite('StarOverlayNetwork', () => {
 
       hubPool.disconnect()
       await condition(() => (
-        setEqual(hub.getMembers(), ['hub']) &&
-        setEqual(spoke1.getMembers(), ['spoke-1']) &&
-        setEqual(spoke2.getMembers(), ['spoke-2']) &&
-        setEqual(spoke3.getMembers(), ['spoke-3'])
+        setEqual(hub.getMemberIds(), ['hub']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['spoke-2']) &&
+        setEqual(spoke3.getMemberIds(), ['spoke-3'])
       ))
       assert.deepEqual(hub.testLeaveEvents, [
         {peerId: 'spoke-1', connectionLost: true},
@@ -159,6 +159,42 @@ suite('StarOverlayNetwork', () => {
         {peerId: 'spoke-2', connectionLost: true},
         {peerId: 'hub', connectionLost: true}
       ])
+    })
+
+    test('relaying peer identities to spokes', async () => {
+      const hubIdentity = {login: 'hub'}
+      const spoke1Identity = {login: 'spoke-1'}
+      const spoke2Identity = {login: 'spoke-2'}
+
+      server.identityProvider.setIdentitiesByToken({
+        'hub-token': hubIdentity,
+        'spoke-1-token': spoke1Identity,
+        'spoke-2-token': spoke2Identity
+      })
+
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
+
+      const hub = buildStarNetwork('network', hubPool, {isHub: true})
+      const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
+      const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
+      await spoke1.connectTo('hub')
+      await spoke2.connectTo('hub')
+
+      await condition(() => (
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-1', 'spoke-2']) &&
+        setEqual(spoke1.getMemberIds(), ['hub', 'spoke-1', 'spoke-2']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-1', 'spoke-2'])
+      ))
+
+      assert.deepEqual(hub.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(hub.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(hub.getMemberIdentity('spoke-2'), spoke2Identity)
+
+      assert.deepEqual(spoke1.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(spoke1.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(spoke1.getMemberIdentity('spoke-2'), spoke2Identity)
     })
   })
 
@@ -327,8 +363,8 @@ suite('StarOverlayNetwork', () => {
     const spoke2Pool = await buildPeerPool('spoke-2', server)
     const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false, connectionTimeout: 1000})
     await spoke2.connectTo('hub')
-    assert(setEqual(hub.getMembers(), ['hub', 'spoke-2']))
-    assert(setEqual(spoke1.getMembers(), ['spoke-1']))
-    assert(setEqual(spoke2.getMembers(), ['hub', 'spoke-2']))
+    assert(setEqual(hub.getMemberIds(), ['hub', 'spoke-2']))
+    assert(setEqual(spoke1.getMemberIds(), ['spoke-1']))
+    assert(setEqual(spoke2.getMemberIds(), ['hub', 'spoke-2']))
   })
 })

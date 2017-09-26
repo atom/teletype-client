@@ -86,11 +86,12 @@ message NetworkMessage {
   }
 
   message StarJoinResponse {
-    repeated string member_ids = 1;
+    map<string, PeerIdentity> member_identities_by_id = 1;
   }
 
   message StarJoinNotification {
     string member_id = 1;
+    PeerIdentity member_identity = 2;
   }
 
   message StarLeaveNotification {
@@ -108,4 +109,8 @@ message NetworkMessage {
     string sender_id = 1;
     bytes body = 2;
   }
+}
+
+message PeerIdentity {
+  string login = 1;
 }

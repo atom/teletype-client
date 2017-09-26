@@ -8,7 +8,7 @@ exports.buildPeerPool =
 async function buildPeerPool (peerId, server) {
   const peerPool = new PeerPool({
     peerId,
-    oauthToken: 'token-' + peerId,
+    oauthToken: peerId + '-token',
     restGateway: new RestGateway({baseURL: server.address}),
     pubSubGateway: server.pubSubGateway,
     testEpoch

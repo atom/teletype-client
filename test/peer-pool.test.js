@@ -32,9 +32,9 @@ suite('PeerPool', () => {
     const peer2Identity = {login: 'identity-2'}
     const peer3Identity = {login: 'identity-3'}
     server.identityProvider.setIdentitiesByToken({
-      'token-1': peer1Identity,
-      'token-2': peer2Identity,
-      'token-3': peer3Identity
+      '1-token': peer1Identity,
+      '2-token': peer2Identity,
+      '3-token': peer3Identity
     })
 
     const peer1Pool = await buildPeerPool('1', server)
