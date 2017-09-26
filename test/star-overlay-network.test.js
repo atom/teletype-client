@@ -6,7 +6,6 @@ const setEqual = require('./helpers/set-equal')
 const condition = require('./helpers/condition')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
-const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const Errors = require('../lib/errors')
 
 suite('StarOverlayNetwork', () => {

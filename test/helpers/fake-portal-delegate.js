@@ -37,14 +37,6 @@ class FakePortalDelegate {
     return this.editorProxy
   }
 
-  addScreenShareTrack (track) {
-    this.lastScreenShareTrack = track
-  }
-
-  getLastScreenShareTrack () {
-    return this.lastScreenShareTrack
-  }
-
   getActiveBufferProxyURI () {
     return (this.editorProxy) ? this.editorProxy.bufferProxy.uri : null
   }
