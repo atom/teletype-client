@@ -121,6 +121,12 @@ suite('RealTimeClient', () => {
 
   suite('onConnectionError', () => {
     test('fires if the underlying PeerPool emits an error', async () => {
+      const stubAuthTokenProvider = {
+        getToken () {
+          return 'test-token'
+        }
+      }
+
       const stubRestGateway = {
         get () {
           return Promise.resolve({ok: true, body: []})
@@ -133,7 +139,11 @@ suite('RealTimeClient', () => {
         subscribe () {}
       }
       const errorEvents = []
-      const client = new RealTimeClient({pubSubGateway: stubPubSubGateway, restGateway: stubRestGateway})
+      const client = new RealTimeClient({
+        authTokenProvider: stubAuthTokenProvider,
+        pubSubGateway: stubPubSubGateway,
+        restGateway: stubRestGateway
+      })
       client.onConnectionError((error) => errorEvents.push(error))
       await client.initialize()
 
