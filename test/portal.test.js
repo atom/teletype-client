@@ -87,6 +87,40 @@ suite('Portal', () => {
     assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2, 1])
   })
 
+  test('site identities', async () => {
+    const hostIdentity = {login: 'host'}
+    const guest1Identity = {login: 'guest1'}
+    const guest2Identity = {login: 'guest2'}
+
+    server.identityProvider.setIdentitiesByToken({
+      'host-token': hostIdentity,
+      'guest1-token': guest1Identity,
+      'guest2-token': guest2Identity
+    })
+
+    const hostPeerPool = await buildPeerPool('host', server)
+    const guest1PeerPool = await buildPeerPool('guest1', server)
+    const guest2PeerPool = await buildPeerPool('guest2', server)
+
+    const hostPortal = buildPortal('portal', hostPeerPool)
+    const guest1Portal = buildPortal('portal', guest1PeerPool, 'host')
+    const guest2Portal = buildPortal('portal', guest2PeerPool, 'host')
+    await guest1Portal.join()
+    await guest2Portal.join()
+
+    assert.deepEqual(hostPortal.getSiteIdentity(1), hostIdentity)
+    assert.deepEqual(hostPortal.getSiteIdentity(2), guest1Identity)
+    assert.deepEqual(hostPortal.getSiteIdentity(3), guest2Identity)
+
+    assert.deepEqual(guest1Portal.getSiteIdentity(1), hostIdentity)
+    assert.deepEqual(guest1Portal.getSiteIdentity(2), guest1Identity)
+    assert.deepEqual(guest1Portal.getSiteIdentity(3), guest2Identity)
+
+    assert.deepEqual(guest2Portal.getSiteIdentity(1), hostIdentity)
+    assert.deepEqual(guest2Portal.getSiteIdentity(2), guest1Identity)
+    assert.deepEqual(guest2Portal.getSiteIdentity(3), guest2Identity)
+  })
+
   function buildPortal (portalId, peerPool, hostPeerId) {
     const siteId = hostPeerId == null ? 1 : null
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
