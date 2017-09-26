@@ -349,7 +349,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to guest', async () => {
-      guest1Portal.simulateNetworkFailure()
+      guest1Portal.peerPool.disconnect()
       await condition(() =>
         hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
         guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
@@ -360,7 +360,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to host', async () => {
-      hostPortal.simulateNetworkFailure()
+      hostPortal.peerPool.disconnect()
       await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
       assert(!guest1EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
