@@ -141,8 +141,8 @@ suite('PeerPool', () => {
         return Promise.resolve()
       }
     }
-    const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
-    const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway})
+    const peer1Pool = new PeerPool({peerId: '1', oauthToken: 'peer-1-token', connectionTimeout: 100, restGateway, pubSubGateway})
+    const peer2Pool = new PeerPool({peerId: '2', oauthToken: 'peer-2-token', connectionTimeout: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
 
     let error
