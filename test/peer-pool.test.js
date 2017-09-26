@@ -105,6 +105,60 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.getPeerIdentity('2'), peer2Identity)
   })
 
+  test('clears the cached auth token and throws an error if the server does not recognize the provided token', async () => {
+    const pubSubGateway = {subscribe () { return Promise.resolve() }}
+    let identityResponse
+    const restGateway = {
+      async get (uri) {
+        switch (uri) {
+          case '/identity':
+            return identityResponse
+          case '/ice-servers':
+            return {ok: true, body: []}
+        }
+      }
+    }
+    const authTokenProvider = {
+      getToken () {
+        return Promise.resolve('peer-1-token')
+      },
+      
+      forgetToken () {
+        this.forgotToken = true
+      }
+    }
+    
+    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider})
+    
+    {
+      identityResponse = {ok: false, status: 401}
+      let error
+      try {
+        await peerPool.initialize()
+      } catch (e) {
+        error = e
+      }
+      
+      assert(error instanceof Errors.InvalidAuthTokenError)
+      assert(authTokenProvider.forgotToken)
+    }
+    
+    // Does not forget the auth token if the status is not 401
+    {
+      authTokenProvider.forgotToken = false
+      identityResponse = {ok: false, status: 500}
+      let error
+      try {
+        await peerPool.initialize()
+      } catch (e) {
+        error = e
+      }
+      
+      assert(error instanceof Errors.NetworkConnectionError)
+      assert(!authTokenProvider.forgotToken)      
+    }
+  })
+
   test('waiting too long to establish a connection to the pub-sub service', async () => {
     const restGateway = new RestGateway({baseURL: server.address})
     const subscription = {
