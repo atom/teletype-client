@@ -405,15 +405,15 @@ suite('Client Integration', () => {
   let tokenCount = 0
   async function buildClient () {
     const client = new RealTimeClient({
-      oauthToken: 'token-' + tokenCount++,
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
       testEpoch
     })
+    const oauthToken = 'token-' + tokenCount++
     // Ensure we don't blow up if we call `initialize` a second time before
     // finishing initialization.
-    await Promise.all([client.initialize(), client.initialize()])
+    await Promise.all([client.initialize({oauthToken}), client.initialize({oauthToken})])
     return client
   }
 })
