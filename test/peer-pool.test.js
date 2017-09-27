@@ -105,7 +105,39 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.getPeerIdentity('2'), peer2Identity)
   })
 
-  test('when the server does not recognize the provided auth token', async () => {
+  test('timeouts connecting to the pub-sub service', async () => {
+    const restGateway = new RestGateway({baseURL: server.address})
+    const subscription = {
+      disposed: false,
+      dispose () {
+        this.disposed = true
+      }
+    }
+    const pubSubGateway = {
+      subscribe () {
+        return new Promise((resolve) => setTimeout(() => { resolve(subscription) }, 150))
+      }
+    }
+    const authTokenProvider = {
+      getToken () {
+        return Promise.resolve('test-token')
+      }
+    }
+    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider})
+
+    let error
+    try {
+      await peerPool.initialize()
+    } catch (e) {
+      error = e
+    }
+    assert(error instanceof Errors.PubSubConnectionError)
+
+    // Ensure the subscription gets disposed when its promise finally resolves.
+    await condition(() => subscription.disposed)
+  })
+
+  test('authentication errors during initialization', async () => {
     const pubSubGateway = {subscribe () { return Promise.resolve() }}
     let identityResponse
     const restGateway = {
@@ -158,37 +190,56 @@ suite('PeerPool', () => {
       assert(!authTokenProvider.forgotToken)      
     }
   })
+  
+  test.only('authentication errors during signaling', async () => {
+    server.identityProvider.setIdentitiesByToken({
+      '1-token': {login: 'peer-1'},
+      '2-token': {login: 'peer-2'},
+    })
+    
+    const peer1Pool = await buildPeerPool('1', server, {connectionTimeout: 300})
+    const peer2Pool = await buildPeerPool('2', server)
 
-  test('timeouts connecting to the pub-sub service', async () => {
-    const restGateway = new RestGateway({baseURL: server.address})
-    const subscription = {
-      disposed: false,
-      dispose () {
-        this.disposed = true
+    // Simulate peer 2 revoking their access token after initializing
+    server.identityProvider.setIdentitiesByToken({
+      '1-token': {login: 'peer-1'},
+      '2-token': null,
+    })
+    
+    // Invalid token error during offer phase of signaling
+    {
+      let error
+      try {
+        await peer2Pool.connectTo('1')
+      } catch (e) {
+        error = e
       }
+      assert(error instanceof Errors.InvalidAuthTokenError)      
+      assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 1)
     }
-    const pubSubGateway = {
-      subscribe () {
-        return new Promise((resolve) => setTimeout(() => { resolve(subscription) }, 150))
+    
+    // Invalid token error during answer phase of signaling
+    {
+      let error
+      try {
+        await peer1Pool.connectTo('2')
+      } catch (e) {
+        error = e
       }
+      assert(error instanceof Errors.PeerConnectionError)
+      assert.equal(peer2Pool.testErrors.length, 1)
+      assert(peer2Pool.testErrors[0] instanceof Errors.InvalidAuthTokenError)
+      assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 2)
     }
-    const authTokenProvider = {
-      getToken () {
-        return Promise.resolve('test-token')
-      }
-    }
-    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider})
-
-    let error
-    try {
-      await peerPool.initialize()
-    } catch (e) {
-      error = e
-    }
-    assert(error instanceof Errors.PubSubConnectionError)
-
-    // Ensure the subscription gets disposed when its promise finally resolves.
-    await condition(() => subscription.disposed)
+    
+    // After restoring peer 2's identity, we should be able to connect
+    server.identityProvider.setIdentitiesByToken({
+      '1-token': {login: 'peer-1'},
+      '2-token': {login: 'peer-2'},
+    })
+    peer2Pool.authTokenProvider.forgotTokenCount = 0    
+    await peer1Pool.connectTo('2')
+    assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 0)
   })
 
   test('timeouts establishing a connection to a peer', async () => {

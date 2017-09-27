@@ -5,15 +5,20 @@ let testEpoch = 0
 const peerPools = []
 
 exports.buildPeerPool =
-async function buildPeerPool (peerId, server) {
+async function buildPeerPool (peerId, server, options = {}) {
   const peerPool = new PeerPool({
     peerId,
     restGateway: new RestGateway({baseURL: server.address}),
     pubSubGateway: server.pubSubGateway,
+    connectionTimeout: options.connectionTimeout,
     testEpoch,
     authTokenProvider: {
+      forgotTokenCount: 0,
       getToken () {
         return Promise.resolve(peerId + '-token')
+      },
+      forgetToken () {
+        this.forgotTokenCount++
       }
     }
   })
