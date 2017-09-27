@@ -194,6 +194,30 @@ suite('StarOverlayNetwork', () => {
       assert.deepEqual(spoke1.getMemberIdentity('hub'), hubIdentity)
       assert.deepEqual(spoke1.getMemberIdentity('spoke-1'), spoke1Identity)
       assert.deepEqual(spoke1.getMemberIdentity('spoke-2'), spoke2Identity)
+
+      assert.deepEqual(spoke2.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(spoke2.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(spoke2.getMemberIdentity('spoke-2'), spoke2Identity)
+
+      // Ensure peer identities can be retrieved on all spokes after disconnection.
+      spoke1.disconnect()
+      await condition(() => (
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-2']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-2'])
+      ))
+
+      assert.deepEqual(hub.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(hub.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(hub.getMemberIdentity('spoke-2'), spoke2Identity)
+
+      assert.deepEqual(spoke1.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(spoke1.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(spoke1.getMemberIdentity('spoke-2'), spoke2Identity)
+
+      assert.deepEqual(spoke2.getMemberIdentity('hub'), hubIdentity)
+      assert.deepEqual(spoke2.getMemberIdentity('spoke-1'), spoke1Identity)
+      assert.deepEqual(spoke2.getMemberIdentity('spoke-2'), spoke2Identity)
     })
   })
 
