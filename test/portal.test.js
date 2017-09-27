@@ -75,6 +75,7 @@ suite('Portal', () => {
     assert.deepEqual(guest1Portal.testDelegate.leaveEvents, [])
     assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2])
 
+    // Ensure leave event is not emitted when the host disconnects.
     hostPortal.dispose()
     await condition(() => (
       setEqual(hostPortal.getActiveSiteIds(), [1]) &&
@@ -84,7 +85,8 @@ suite('Portal', () => {
 
     assert.deepEqual(hostPortal.testDelegate.leaveEvents, [2])
     assert.deepEqual(guest1Portal.testDelegate.leaveEvents, [])
-    assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2, 1])
+    assert.deepEqual(guest2Portal.testDelegate.leaveEvents, [2])
+    assert(guest2Portal.testDelegate.hasHostClosedPortal())
   })
 
   test('site identities', async () => {
