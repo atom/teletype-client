@@ -137,60 +137,6 @@ suite('PeerPool', () => {
     await condition(() => subscription.disposed)
   })
 
-  test('authentication errors during initialization', async () => {
-    const pubSubGateway = {subscribe () { return Promise.resolve() }}
-    let identityResponse
-    const restGateway = {
-      async get (uri) {
-        switch (uri) {
-          case '/identity':
-            return identityResponse
-          case '/ice-servers':
-            return {ok: true, body: []}
-        }
-      }
-    }
-    const authTokenProvider = {
-      getToken () {
-        return Promise.resolve('peer-1-token')
-      },
-
-      forgetToken () {
-        this.forgotToken = true
-      }
-    }
-
-    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider})
-
-    {
-      identityResponse = {ok: false, status: 401}
-      let error
-      try {
-        await peerPool.initialize()
-      } catch (e) {
-        error = e
-      }
-
-      assert(error instanceof Errors.InvalidAuthTokenError)
-      assert(authTokenProvider.forgotToken)
-    }
-
-    // Does not forget the auth token if the status is not 401
-    {
-      authTokenProvider.forgotToken = false
-      identityResponse = {ok: false, status: 500}
-      let error
-      try {
-        await peerPool.initialize()
-      } catch (e) {
-        error = e
-      }
-
-      assert(error instanceof Errors.NetworkConnectionError)
-      assert(!authTokenProvider.forgotToken)
-    }
-  })
-
   test('authentication errors during signaling', async () => {
     server.identityProvider.setIdentitiesByToken({
       '1-token': {login: 'peer-1'},
@@ -215,7 +161,8 @@ suite('PeerPool', () => {
         error = e
       }
       assert(error instanceof Errors.InvalidAuthTokenError)
-      assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 1)
+      assert.equal(peer2Pool.authTokenProvider.authToken, null)
+      peer2Pool.authTokenProvider.authToken = '2-token'
     }
 
     // Invalid token error during answer phase of signaling
@@ -229,7 +176,8 @@ suite('PeerPool', () => {
       assert(error instanceof Errors.PeerConnectionError)
       assert.equal(peer2Pool.testErrors.length, 1)
       assert(peer2Pool.testErrors[0] instanceof Errors.InvalidAuthTokenError)
-      assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 2)
+      assert.equal(peer2Pool.authTokenProvider.authToken, null)
+      peer2Pool.authTokenProvider.authToken = '2-token'
     }
 
     // After restoring peer 2's identity, we should be able to connect
@@ -237,9 +185,8 @@ suite('PeerPool', () => {
       '1-token': {login: 'peer-1'},
       '2-token': {login: 'peer-2'},
     })
-    peer2Pool.authTokenProvider.forgotTokenCount = 0
     await peer1Pool.connectTo('2')
-    assert.equal(peer2Pool.authTokenProvider.forgotTokenCount, 0)
+    assert.equal(peer2Pool.authTokenProvider.authToken, '2-token')
   })
 
   test('timeouts establishing a connection to a peer', async () => {

@@ -56,7 +56,10 @@ suite('RealTimeClient', () => {
   suite('createPortal', () => {
     test('throws if posting the portal to the server fails', async () => {
       const stubRestGateway = {}
-      const client = new RealTimeClient({restGateway: stubRestGateway})
+      const client = new RealTimeClient({
+        restGateway: stubRestGateway,
+      })
+      client.authenticate = async function () { return true }
 
       {
         let error
@@ -90,6 +93,7 @@ suite('RealTimeClient', () => {
     test('throws if retrieving the portal from the server fails', async () => {
       const stubRestGateway = {}
       const client = new RealTimeClient({restGateway: stubRestGateway})
+      client.authenticate = async function () { return true }
 
       {
         let error

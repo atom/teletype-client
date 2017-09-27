@@ -6,6 +6,7 @@ const peerPools = []
 
 exports.buildPeerPool =
 async function buildPeerPool (peerId, server, options = {}) {
+  const authToken = peerId + '-token'
   const peerPool = new PeerPool({
     peerId,
     restGateway: new RestGateway({baseURL: server.address}),
@@ -13,16 +14,17 @@ async function buildPeerPool (peerId, server, options = {}) {
     connectionTimeout: options.connectionTimeout,
     testEpoch,
     authTokenProvider: {
-      forgotTokenCount: 0,
+      authToken: authToken,
       getToken () {
-        return Promise.resolve(peerId + '-token')
+        return Promise.resolve(this.authToken)
       },
       forgetToken () {
-        this.forgotTokenCount++
+        this.authToken = null
       }
     }
   })
   await peerPool.initialize()
+  peerPool.setLocalPeerIdentity(await server.identityProvider.identityForToken(authToken))
 
   peerPool.testDisconnectionEvents = []
   peerPool.onDisconnection(({peerId}) => {
