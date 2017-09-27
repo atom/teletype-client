@@ -105,7 +105,7 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.getPeerIdentity('2'), peer2Identity)
   })
 
-  test('clears the cached auth token and throws an error if the server does not recognize the provided token', async () => {
+  test('when the server does not recognize the provided auth token', async () => {
     const pubSubGateway = {subscribe () { return Promise.resolve() }}
     let identityResponse
     const restGateway = {
@@ -159,7 +159,7 @@ suite('PeerPool', () => {
     }
   })
 
-  test('waiting too long to establish a connection to the pub-sub service', async () => {
+  test('timeouts connecting to the pub-sub service', async () => {
     const restGateway = new RestGateway({baseURL: server.address})
     const subscription = {
       disposed: false,
@@ -191,7 +191,7 @@ suite('PeerPool', () => {
     await condition(() => subscription.disposed)
   })
 
-  test('waiting too long to establish a connection to another peer', async () => {
+  test('timeouts establishing a connection to a peer', async () => {
     const restGateway = new RestGateway({baseURL: server.address})
     const subscribeRequests = []
     const pubSubGateway = {
