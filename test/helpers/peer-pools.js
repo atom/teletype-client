@@ -18,7 +18,7 @@ async function buildPeerPool (peerId, server, options = {}) {
       getToken () {
         return Promise.resolve(this.authToken)
       },
-      forgetToken () {
+      didInvalidateToken () {
         this.authToken = null
       }
     }
