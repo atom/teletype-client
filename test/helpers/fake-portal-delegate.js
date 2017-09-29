@@ -3,6 +3,8 @@ class FakePortalDelegate {
   constructor () {
     this.hostClosedPortal = false
     this.hostLostConnection = false
+    this.joinEvents = []
+    this.leaveEvents = []
   }
 
   dispose () {
@@ -37,15 +39,15 @@ class FakePortalDelegate {
     return this.editorProxy
   }
 
-  addScreenShareTrack (track) {
-    this.lastScreenShareTrack = track
-  }
-
-  getLastScreenShareTrack () {
-    return this.lastScreenShareTrack
-  }
-
   getActiveBufferProxyURI () {
     return (this.editorProxy) ? this.editorProxy.bufferProxy.uri : null
+  }
+
+  siteDidJoin (siteId) {
+    this.joinEvents.push(siteId)
+  }
+
+  siteDidLeave (siteId) {
+    this.leaveEvents.push(siteId)
   }
 }

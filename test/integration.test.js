@@ -5,7 +5,6 @@ const FakeBufferDelegate = require('./helpers/fake-buffer-delegate')
 const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const condition = require('./helpers/condition')
-const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const {RealTimeClient, Errors} = require('..')
 const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
@@ -349,7 +348,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to guest', async () => {
-      guest1Portal.simulateNetworkFailure()
+      guest1Portal.peerPool.disconnect()
       await condition(() =>
         hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
         guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId) == null &&
@@ -360,7 +359,7 @@ suite('Client Integration', () => {
     })
 
     test('losing connection to host', async () => {
-      hostPortal.simulateNetworkFailure()
+      hostPortal.peerPool.disconnect()
       await condition(() => guest1PortalDelegate.hasHostLostConnection() && guest2PortalDelegate.hasHostLostConnection() && guest3PortalDelegate.hasHostLostConnection())
 
       assert(!guest1EditorDelegate.getSelectionsForSiteId(hostPortal.siteId))
@@ -403,16 +402,19 @@ suite('Client Integration', () => {
     }
   })
 
+  let tokenCount = 0
   async function buildClient () {
+    const oauthToken = 'token-' + tokenCount++
     const client = new RealTimeClient({
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
+      authTokenProvider: { getToken () { return oauthToken} },
       testEpoch
     })
     // Ensure we don't blow up if we call `initialize` a second time before
     // finishing initialization.
-    await Promise.all([client.initialize(), client.initialize()])
+    await Promise.all([client.initialize({oauthToken}), client.initialize({oauthToken})])
     return client
   }
 })

@@ -5,10 +5,10 @@ function buildStarNetwork (id, peerPool, {isHub, connectionTimeout}={}) {
   const network = new StarOverlayNetwork({id, peerPool, isHub, connectionTimeout})
 
   network.testJoinEvents = []
-  network.onPeerJoin(({peerId}) => network.testJoinEvents.push(peerId))
+  network.onMemberJoin(({peerId}) => network.testJoinEvents.push(peerId))
 
   network.testLeaveEvents = []
-  network.onPeerLeave(({peerId, connectionLost}) => network.testLeaveEvents.push({peerId, connectionLost}))
+  network.onMemberLeave(({peerId, connectionLost}) => network.testLeaveEvents.push({peerId, connectionLost}))
 
   network.testInbox = []
   network.onReceive(({senderId, message}) => {

@@ -5,7 +5,6 @@ const {startTestServer} = require('@atom/real-time-server')
 const condition = require('./helpers/condition')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const buildStarNetwork = require('./helpers/build-star-network')
-const getExampleMediaStream = require('./helpers/get-example-media-stream')
 const Router = require('../lib/router')
 
 suite('Router', () => {

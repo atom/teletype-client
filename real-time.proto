@@ -73,23 +73,29 @@ message NetworkMessage {
   string network_id = 1;
 
   oneof variant {
-    StarConnection star_connection = 2;
-    StarConnectionAck star_connection_ack = 3;
-    StarDisconnection star_disconnection = 4;
-    StarUnicast star_unicast = 5;
-    StarBroadcast star_broadcast = 6;
+    StarJoinRequest star_join_request = 2;
+    StarJoinResponse star_join_response = 3;
+    StarJoinNotification star_join_notification = 4;
+    StarLeaveNotification star_leave_notification = 5;
+    StarUnicast star_unicast = 6;
+    StarBroadcast star_broadcast = 7;
   }
 
-  message StarConnection {
+  message StarJoinRequest {
     string sender_id = 1;
   }
 
-  message StarConnectionAck {
-    repeated string member_ids = 1;
+  message StarJoinResponse {
+    map<string, PeerIdentity> member_identities_by_id = 1;
   }
 
-  message StarDisconnection {
-    string sender_id = 1;
+  message StarJoinNotification {
+    string member_id = 1;
+    PeerIdentity member_identity = 2;
+  }
+
+  message StarLeaveNotification {
+    string member_id = 1;
     bool connection_lost = 2;
   }
 
@@ -103,4 +109,8 @@ message NetworkMessage {
     string sender_id = 1;
     bytes body = 2;
   }
+}
+
+message PeerIdentity {
+  string login = 1;
 }
