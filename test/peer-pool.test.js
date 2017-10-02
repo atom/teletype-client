@@ -160,7 +160,7 @@ suite('PeerPool', () => {
       } catch (e) {
         error = e
       }
-      assert(error instanceof Errors.InvalidAuthTokenError)
+      assert(error instanceof Errors.AuthenticationError)
       assert.equal(peer2Pool.authTokenProvider.authToken, null)
       peer2Pool.authTokenProvider.authToken = '2-token'
     }
@@ -175,7 +175,7 @@ suite('PeerPool', () => {
       }
       assert(error instanceof Errors.PeerConnectionError)
       assert.equal(peer2Pool.testErrors.length, 1)
-      assert(peer2Pool.testErrors[0] instanceof Errors.InvalidAuthTokenError)
+      assert(peer2Pool.testErrors[0] instanceof Errors.AuthenticationError)
       assert.equal(peer2Pool.authTokenProvider.authToken, null)
       peer2Pool.authTokenProvider.authToken = '2-token'
     }

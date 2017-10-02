@@ -160,4 +160,67 @@ suite('RealTimeClient', () => {
       assert.deepEqual(errorEvents, [errorEvent1, errorEvent2])
     })
   })
+
+  suite('authenticate', () => {
+    test('keeps retrieving new tokens if authentication fails with a 401 error', async () => {
+      const stubRestGateway = {
+        get (url, {headers}) {
+          // Stop returning 401 when authenticating with the 3rd token.
+          return headers['GitHub-OAuth-token'] === 'token-3'
+            ? {ok: true, status: 200, body: {login: 'some-user'}}
+            : {ok: false, status: 401, body: {}}
+        }
+      }
+      const stubAuthTokenProvider = {
+        token: 'token-1',
+        nextTokenId: 2,
+        getToken () {
+          return this.token
+        },
+        didInvalidateToken () {
+          this.nextTokenId++
+          this.token = 'token-' + this.nextTokenId
+        }
+      }
+      const stubPeerPool = {
+        setLocalPeerIdentity (identity) {
+          this.localPeerIdentity = identity
+        }
+      }
+      const client = new RealTimeClient({
+        restGateway: stubRestGateway,
+        authTokenProvider: stubAuthTokenProvider
+      })
+      client.peerPool = stubPeerPool
+
+      await client.authenticate()
+      assert.deepEqual(client.peerPool.localPeerIdentity, {login: 'some-user'})
+    })
+
+    test('throws if authentication fails with a non-401 error', async () => {
+      const stubRestGateway = {
+        get (url) {
+          return {ok: false, status: 405, body: {message: 'an error'}}
+        }
+      }
+      const stubAuthTokenProvider = {
+        getToken () {
+          return 'some-token'
+        }
+      }
+      const client = new RealTimeClient({
+        restGateway: stubRestGateway,
+        authTokenProvider: stubAuthTokenProvider
+      })
+
+      let error
+      try {
+        await client.authenticate()
+      } catch (e) {
+        error = e
+      }
+      assert(error instanceof Errors.AuthenticationError)
+      assert(error.message.includes('an error'))
+    })
+  })
 })
