@@ -54,12 +54,23 @@ suite('RealTimeClient', () => {
   })
 
   suite('createPortal', () => {
+    test('returns null if the token is invalid', async () => {
+      const client = new RealTimeClient({restGateway: {}})
+      client.verifyOauthToken = async function () {
+        return {success: false}
+      }
+
+      assert(!await client.createPortal())
+    })
+
     test('throws if posting the portal to the server fails', async () => {
       const stubRestGateway = {}
       const client = new RealTimeClient({
         restGateway: stubRestGateway,
       })
-      client.authenticate = async function () { return true }
+      client.verifyOauthToken = async function () {
+        return {success: true}
+      }
 
       {
         let error
@@ -90,10 +101,21 @@ suite('RealTimeClient', () => {
   })
 
   suite('joinPortal', () => {
+    test('returns null if the token is invalid', async () => {
+      const client = new RealTimeClient({restGateway: {}})
+      client.verifyOauthToken = async function () {
+        return {success: false}
+      }
+
+      assert(!await client.joinPortal('some-portal'))
+    })
+
     test('throws if retrieving the portal from the server fails', async () => {
       const stubRestGateway = {}
       const client = new RealTimeClient({restGateway: stubRestGateway})
-      client.authenticate = async function () { return true }
+      client.verifyOauthToken = async function () {
+        return {success: true}
+      }
 
       {
         let error
@@ -125,12 +147,6 @@ suite('RealTimeClient', () => {
 
   suite('onConnectionError', () => {
     test('fires if the underlying PeerPool emits an error', async () => {
-      const stubAuthTokenProvider = {
-        getToken () {
-          return 'test-token'
-        }
-      }
-
       const stubRestGateway = {
         get () {
           return Promise.resolve({ok: true, body: []})
@@ -144,7 +160,6 @@ suite('RealTimeClient', () => {
       }
       const errorEvents = []
       const client = new RealTimeClient({
-        authTokenProvider: stubAuthTokenProvider,
         pubSubGateway: stubPubSubGateway,
         restGateway: stubRestGateway
       })
@@ -161,66 +176,93 @@ suite('RealTimeClient', () => {
     })
   })
 
-  suite('authenticate', () => {
-    test('keeps retrieving new tokens if authentication fails with a 401 error', async () => {
-      const stubRestGateway = {
-        get (url, {headers}) {
-          // Stop returning 401 when authenticating with the 3rd token.
-          return headers['GitHub-OAuth-token'] === 'token-3'
-            ? {ok: true, status: 200, body: {login: 'some-user'}}
-            : {ok: false, status: 401, body: {}}
-        }
-      }
-      const stubAuthTokenProvider = {
-        token: 'token-1',
-        nextTokenId: 2,
-        getToken () {
-          return this.token
-        },
-        didInvalidateToken () {
-          this.nextTokenId++
-          this.token = 'token-' + this.nextTokenId
-        }
-      }
-      const stubPeerPool = {
-        setLocalPeerIdentity (identity) {
-          this.localPeerIdentity = identity
-        }
-      }
-      const client = new RealTimeClient({
-        restGateway: stubRestGateway,
-        authTokenProvider: stubAuthTokenProvider
-      })
-      client.peerPool = stubPeerPool
-
-      await client.authenticate()
-      assert.deepEqual(client.peerPool.localPeerIdentity, {login: 'some-user'})
-    })
-
-    test('throws if authentication fails with a non-401 error', async () => {
+  suite('signIn(token)', () => {
+    test('returns false when the given token is invalid', async () => {
       const stubRestGateway = {
         get (url) {
-          return {ok: false, status: 405, body: {message: 'an error'}}
-        }
-      }
-      const stubAuthTokenProvider = {
-        getToken () {
-          return 'some-token'
+          return {ok: false, status: 401, body: {}}
         }
       }
       const client = new RealTimeClient({
-        restGateway: stubRestGateway,
-        authTokenProvider: stubAuthTokenProvider
+        pubSubGateway: {},
+        restGateway: stubRestGateway
+      })
+
+      assert(!await client.signIn('some-token'))
+    })
+  })
+
+  suite('verifyOauthToken', () => {
+    test('returns the identity of the user with the given token', async () => {
+      const stubRestGateway = {
+        get (url) {
+          return {ok: true, status: 200, body: {login: 'some-user'}}
+        }
+      }
+      const client = new RealTimeClient({
+        pubSubGateway: {},
+        restGateway: stubRestGateway
+      })
+
+      const {success, identity} = await client.verifyOauthToken()
+      assert(success)
+      assert.deepEqual(identity, {login: 'some-user'})
+    })
+
+    test('signs out the client when the given token is invalid', async () => {
+      const stubRestGateway = {
+        get (url) {
+          return {ok: false, status: 401, body: {}}
+        }
+      }
+      const client = new RealTimeClient({
+        pubSubGateway: {},
+        restGateway: stubRestGateway
+      })
+      client.peerPool = {
+        oauthToken: 'some-token',
+        identity: {login: 'some-user'},
+        disconnected: false,
+        disconnect () {
+          this.disconnected = true
+        },
+        setLocalPeerIdentity (oauthToken, identity) {
+          this.oauthToken = oauthToken
+          this.identity = identity
+        }
+      }
+      client.signedIn = true
+
+      let signOutEventsCount = 0
+      client.onSignOut(() => signOutEventsCount++)
+
+      const {success} = await client.verifyOauthToken()
+      assert(!success)
+      assert(!client.signedIn)
+      assert(!client.peerPool.oauthToken)
+      assert(!client.peerPool.identity)
+      assert(client.peerPool.disconnected)
+      assert.equal(signOutEventsCount, 1)
+    })
+
+    test('throws when an unexpected authentication failure occurs', async () => {
+      const stubRestGateway = {
+        get (url) {
+          return {ok: false, status: 500, body: 'whoops'}
+        }
+      }
+      const client = new RealTimeClient({
+        pubSubGateway: {},
+        restGateway: stubRestGateway
       })
 
       let error
       try {
-        await client.authenticate()
+        await client.verifyOauthToken()
       } catch (e) {
         error = e
       }
-      assert(error instanceof Errors.AuthenticationError)
-      assert(error.message.includes('an error'))
+      assert(error instanceof Errors.UnexpectedAuthenticationError)
     })
   })
 })

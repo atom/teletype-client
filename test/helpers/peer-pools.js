@@ -12,19 +12,10 @@ async function buildPeerPool (peerId, server, options = {}) {
     restGateway: new RestGateway({baseURL: server.address}),
     pubSubGateway: server.pubSubGateway,
     connectionTimeout: options.connectionTimeout,
-    testEpoch,
-    authTokenProvider: {
-      authToken: authToken,
-      getToken () {
-        return Promise.resolve(this.authToken)
-      },
-      didInvalidateToken () {
-        this.authToken = null
-      }
-    }
+    testEpoch
   })
   await peerPool.initialize()
-  peerPool.setLocalPeerIdentity(await server.identityProvider.identityForToken(authToken))
+  peerPool.setLocalPeerIdentity(authToken, await server.identityProvider.identityForToken(authToken))
 
   peerPool.testDisconnectionEvents = []
   peerPool.onDisconnection(({peerId}) => {
