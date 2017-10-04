@@ -415,6 +415,7 @@ suite('Client Integration', () => {
     await Promise.all([client.initialize(), client.initialize()])
     const signedIn = await client.signIn('token-' + tokenCount)
     assert(signedIn)
+    assert(client.isSignedIn())
 
     return client
   }
