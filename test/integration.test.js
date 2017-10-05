@@ -376,6 +376,33 @@ suite('Client Integration', () => {
     })
   })
 
+  test('simultaneously hosting a portal and participating as a guest in other portals', async () => {
+    const client1 = await buildClient()
+    const client2 = await buildClient()
+
+    // client1 hosts a portal with client2 as a guest
+    const client1HostPortal = await client1.createPortal()
+    const client1BufferProxy = await client1HostPortal.createBufferProxy({uri: 'client-1-buffer', text: ''})
+    const client1EditorProxy = await client1HostPortal.createEditorProxy({bufferProxy: client1BufferProxy, selectionRanges: {}})
+    client1HostPortal.setActiveEditorProxy(client1EditorProxy)
+
+    const client2GuestPortalDelegate = new FakePortalDelegate()
+    const client2GuestPortal = await client2.joinPortal(client1HostPortal.id)
+    client2GuestPortal.setDelegate(client2GuestPortalDelegate)
+    assert.equal(client2GuestPortalDelegate.getActiveBufferProxyURI(), 'client-1-buffer')
+
+    // while still participating as a guest in the portal above, client2 hosts a portal with client1 as a guest
+    const client2HostPortal = await client2.createPortal()
+    const client2BufferProxy = await client2HostPortal.createBufferProxy({uri: 'client-2-buffer', text: ''})
+    const client2EditorProxy = await client2HostPortal.createEditorProxy({bufferProxy: client2BufferProxy, selectionRanges: {}})
+    client2HostPortal.setActiveEditorProxy(client2EditorProxy)
+
+    const client1GuestPortalDelegate = new FakePortalDelegate()
+    const client1GuestPortal = await client1.joinPortal(client2HostPortal.id)
+    client1GuestPortal.setDelegate(client1GuestPortalDelegate)
+    assert.equal(client1GuestPortalDelegate.getActiveBufferProxyURI(), 'client-2-buffer')
+  })
+
   test('attempting to join a non-existent portal', async () => {
     const client = await buildClient()
 
