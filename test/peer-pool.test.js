@@ -118,12 +118,7 @@ suite('PeerPool', () => {
         return new Promise((resolve) => setTimeout(() => { resolve(subscription) }, 150))
       }
     }
-    const authTokenProvider = {
-      getToken () {
-        return Promise.resolve('test-token')
-      }
-    }
-    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider})
+    const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
 
     let error
     try {
@@ -160,9 +155,7 @@ suite('PeerPool', () => {
       } catch (e) {
         error = e
       }
-      assert(error instanceof Errors.AuthenticationError)
-      assert.equal(peer2Pool.authTokenProvider.authToken, null)
-      peer2Pool.authTokenProvider.authToken = '2-token'
+      assert(error instanceof Errors.InvalidAuthenticationTokenError)
     }
 
     // Invalid token error during answer phase of signaling
@@ -175,9 +168,7 @@ suite('PeerPool', () => {
       }
       assert(error instanceof Errors.PeerConnectionError)
       assert.equal(peer2Pool.testErrors.length, 1)
-      assert(peer2Pool.testErrors[0] instanceof Errors.AuthenticationError)
-      assert.equal(peer2Pool.authTokenProvider.authToken, null)
-      peer2Pool.authTokenProvider.authToken = '2-token'
+      assert(peer2Pool.testErrors[0] instanceof Errors.InvalidAuthenticationTokenError)
     }
 
     // After restoring peer 2's identity, we should be able to connect
@@ -186,7 +177,6 @@ suite('PeerPool', () => {
       '2-token': {login: 'peer-2'},
     })
     await peer1Pool.connectTo('2')
-    assert.equal(peer2Pool.authTokenProvider.authToken, '2-token')
   })
 
   test('timeouts establishing a connection to a peer', async () => {
@@ -198,20 +188,12 @@ suite('PeerPool', () => {
         return Promise.resolve()
       }
     }
-    const authTokenProvider1 = {
-      getToken () {
-        return Promise.resolve('peer-1-token')
-      }
-    }
-    const authTokenProvider2 = {
-      getToken () {
-        return Promise.resolve('peer-1-token')
-      }
-    }
 
-    const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider: authTokenProvider1})
-    const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway, authTokenProvider: authTokenProvider2})
+    const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
+    const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
+    peer1Pool.setLocalPeerIdentity('peer-1-token', {login: 'peer-1'})
+    peer2Pool.setLocalPeerIdentity('peer-2-token', {login: 'peer-2'})
 
     let error
     try {
