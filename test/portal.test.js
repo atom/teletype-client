@@ -123,6 +123,29 @@ suite('Portal', () => {
     assert.deepEqual(guest2Portal.getSiteIdentity(3), guest2Identity)
   })
 
+  test('changing active editor proxy', async () => {
+    const hostPeerPool = await buildPeerPool('host', server)
+    const guestPeerPool = await buildPeerPool('guest', server)
+
+    const hostPortal = buildPortal('portal', hostPeerPool)
+    const guestPortal = buildPortal('portal', guestPeerPool, 'host')
+    await guestPortal.join()
+    assert(guestPortal.testDelegate.getActiveEditorProxy() === null)
+    guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+
+    // Don't notify guests when setting the active editor proxy to the same value it currently has.
+    hostPortal.setActiveEditorProxy(hostPortal.testDelegate.getActiveEditorProxy())
+
+    // Set the active editor proxy to a different value to ensure guests are notified only of this change.
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: '', text: ''})
+    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy})
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
+    await condition(() => (
+      guestPortal.testDelegate.getActiveEditorProxy() != null &&
+      guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+    ))
+  })
+
   function buildPortal (portalId, peerPool, hostPeerId) {
     const siteId = hostPeerId == null ? 1 : null
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
