@@ -218,6 +218,18 @@ suite('PeerPool', () => {
     await peer2Pool.getConnectedPromise('1')
   })
 
+  test('attempting to connect to yourself', async () => {
+    const peerPool = await buildPeerPool('1', server)
+
+    let error
+    try {
+      await peerPool.connectTo('1')
+    } catch (e) {
+      error = e
+    }
+    assert(error instanceof Errors.PeerConnectionError)
+  })
+
   test('RTCPeerConnection and RTCDataChannel error events', async () => {
     const peer1Pool = await buildPeerPool('1', server)
     const peer2Pool = await buildPeerPool('2', server)
