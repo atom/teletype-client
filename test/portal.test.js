@@ -139,7 +139,7 @@ suite('Portal', () => {
     // Set the active editor proxy to a different value to ensure guests are notified only of this change.
     const hostBufferProxy = await hostPortal.createBufferProxy({uri: '', text: ''})
     const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy})
-    hostPortal.setActiveEditorProxy(hostEditorProxy) // set to new value
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
     await condition(() => (
       guestPortal.testDelegate.getActiveEditorProxy() != null &&
       guestPortal.testDelegate.activeEditorProxyChangeCount === 1
