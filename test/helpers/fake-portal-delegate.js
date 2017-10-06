@@ -5,6 +5,7 @@ class FakePortalDelegate {
     this.hostLostConnection = false
     this.joinEvents = []
     this.leaveEvents = []
+    this.activeEditorProxyChangeCount = 0
   }
 
   dispose () {
@@ -33,6 +34,7 @@ class FakePortalDelegate {
 
   setActiveEditorProxy (editorProxy) {
     this.editorProxy = editorProxy
+    this.activeEditorProxyChangeCount++
   }
 
   getActiveEditorProxy () {
