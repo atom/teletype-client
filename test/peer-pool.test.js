@@ -42,9 +42,9 @@ suite('PeerPool', () => {
     const peer3Pool = await buildPeerPool('3', server)
 
     // Local peer identities
-    assert.deepEqual(peer1Pool.getPeerIdentity('1'), peer1Identity)
-    assert.deepEqual(peer2Pool.getPeerIdentity('2'), peer2Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('3'), peer3Identity)
+    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), peer1Identity)
+    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), peer2Identity)
+    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), peer3Identity)
 
     // Connection
     await peer1Pool.connectTo('3')
@@ -95,10 +95,12 @@ suite('PeerPool', () => {
     assert.deepEqual(peer2Pool.testDisconnectionEvents, ['3'])
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
 
-    // Retain identities of disconnected peers
-    assert.deepEqual(peer1Pool.getPeerIdentity('1'), peer1Identity)
-    assert.deepEqual(peer2Pool.getPeerIdentity('2'), peer2Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('3'), peer3Identity)
+    // Retain local peer identities after disconnecting
+    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), peer1Identity)
+    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), peer2Identity)
+    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), peer3Identity)
+
+    // Retain remote peer identities after disconnecting
     assert.deepEqual(peer1Pool.getPeerIdentity('3'), peer3Identity)
     assert.deepEqual(peer3Pool.getPeerIdentity('1'), peer1Identity)
     assert.deepEqual(peer2Pool.getPeerIdentity('3'), peer3Identity)
