@@ -440,9 +440,7 @@ suite('Client Integration', () => {
     // Ensure we don't blow up if we call `initialize` a second time before
     // finishing initialization.
     await Promise.all([client.initialize(), client.initialize()])
-    const signedIn = await client.signIn('token-' + tokenCount)
-    assert(signedIn)
-    assert(client.isSignedIn())
+    await client.signIn('token-' + tokenCount++)
 
     return client
   }

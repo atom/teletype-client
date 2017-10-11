@@ -177,6 +177,35 @@ suite('RealTimeClient', () => {
   })
 
   suite('signIn(token)', () => {
+    test('returns true and emits an event when the given token is valid', async () => {
+      const stubRestGateway = {
+        get (url) {
+          return {ok: true, status: 200, body: {login: 'some-user'}}
+        }
+      }
+      const client = new RealTimeClient({
+        pubSubGateway: {},
+        restGateway: stubRestGateway
+      })
+      client.peerPool = {
+        setLocalPeerIdentity (token, identity) {
+          this.identity = identity
+        },
+        getLocalPeerIdentity () {
+          return this.identity
+        }
+      }
+
+      let signInChangeEventsCount = 0
+      client.onSignInChange(() => signInChangeEventsCount++)
+
+      const signedIn = await client.signIn('some-token')
+      assert(signedIn)
+      assert(client.isSignedIn())
+      assert.deepEqual(client.getLocalUserIdentity(), {login: 'some-user'})
+      assert.equal(signInChangeEventsCount, 1)
+    })
+
     test('returns false when the given token is invalid', async () => {
       const stubRestGateway = {
         get (url) {
@@ -229,20 +258,23 @@ suite('RealTimeClient', () => {
         setLocalPeerIdentity (oauthToken, identity) {
           this.oauthToken = oauthToken
           this.identity = identity
+        },
+        getLocalPeerIdentity () {
+          return this.identity
         }
       }
       client.signedIn = true
 
-      let signOutEventsCount = 0
-      client.onSignOut(() => signOutEventsCount++)
+      let signInChangeEventsCount = 0
+      client.onSignInChange(() => signInChangeEventsCount++)
 
       const {success} = await client.verifyOauthToken()
       assert(!success)
       assert(!client.signedIn)
+      assert(!client.getLocalUserIdentity())
       assert(!client.peerPool.oauthToken)
-      assert(!client.peerPool.identity)
       assert(client.peerPool.disconnected)
-      assert.equal(signOutEventsCount, 1)
+      assert.equal(signInChangeEventsCount, 1)
     })
 
     test('throws when an unexpected authentication failure occurs', async () => {
