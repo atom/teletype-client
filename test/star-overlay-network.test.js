@@ -136,6 +136,27 @@ suite('StarOverlayNetwork', () => {
       assert.deepEqual(spoke2.testLeaveEvents, [{peerId: 'spoke-1', connectionLost: true}])
       assert.deepEqual(spoke3.testLeaveEvents, [{peerId: 'spoke-1', connectionLost: true}])
 
+      // Ensure only one leave event is received when disconnecting both the network and the peer pool.
+      spoke2.disconnect()
+      spoke2Pool.disconnect()
+
+      await condition(() => (
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-3']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['spoke-2']) &&
+        setEqual(spoke3.getMemberIds(), ['hub', 'spoke-3'])
+      ))
+      assert.deepEqual(hub.testLeaveEvents, [
+        {peerId: 'spoke-1', connectionLost: true},
+        {peerId: 'spoke-2', connectionLost: false}
+      ])
+      assert.deepEqual(spoke1.testLeaveEvents, [{peerId: 'hub', connectionLost: true}])
+      assert.deepEqual(spoke2.testLeaveEvents, [{peerId: 'spoke-1', connectionLost: true}])
+      assert.deepEqual(spoke3.testLeaveEvents, [
+        {peerId: 'spoke-1', connectionLost: true},
+        {peerId: 'spoke-2', connectionLost: false}
+      ])
+
       hubPool.disconnect()
       await condition(() => (
         setEqual(hub.getMemberIds(), ['hub']) &&
@@ -145,17 +166,14 @@ suite('StarOverlayNetwork', () => {
       ))
       assert.deepEqual(hub.testLeaveEvents, [
         {peerId: 'spoke-1', connectionLost: true},
-        {peerId: 'spoke-2', connectionLost: true},
+        {peerId: 'spoke-2', connectionLost: false},
         {peerId: 'spoke-3', connectionLost: true}
       ])
       assert.deepEqual(spoke1.testLeaveEvents, [{peerId: 'hub', connectionLost: true}])
-      assert.deepEqual(spoke2.testLeaveEvents, [
-        {peerId: 'spoke-1', connectionLost: true},
-        {peerId: 'hub', connectionLost: true}
-      ])
+      assert.deepEqual(spoke2.testLeaveEvents, [{peerId: 'spoke-1', connectionLost: true}])
       assert.deepEqual(spoke3.testLeaveEvents, [
         {peerId: 'spoke-1', connectionLost: true},
-        {peerId: 'spoke-2', connectionLost: true},
+        {peerId: 'spoke-2', connectionLost: false},
         {peerId: 'hub', connectionLost: true}
       ])
     })
