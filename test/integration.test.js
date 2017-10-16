@@ -157,7 +157,7 @@ suite('Client Integration', () => {
 
     const hostPortal = await host.createPortal()
     const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
-    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selectionRanges: {}})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
     hostPortal.setActiveEditorProxy(hostEditorProxy1)
 
     const guestPortalDelegate = new FakePortalDelegate()
@@ -167,7 +167,7 @@ suite('Client Integration', () => {
     const guestEditorDelegate1 = guestPortalDelegate.getActiveEditorProxy()
 
     const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
-    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selectionRanges: {}})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {}})
     hostPortal.setActiveEditorProxy(hostEditorProxy2)
     await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-b')
     const guestEditorDelegate2 = guestPortalDelegate.getActiveEditorProxy()
@@ -183,7 +183,7 @@ suite('Client Integration', () => {
 
     const hostPortal = await host.createPortal()
     const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
-    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
@@ -209,9 +209,9 @@ suite('Client Integration', () => {
     const hostPortal = await host.createPortal()
     const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
     hostBufferProxy.setDelegate(new FakeBufferDelegate())
-    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
     hostEditorProxy1.setDelegate(new FakeEditorDelegate())
-    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selectionRanges: {}})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
     hostEditorProxy2.setDelegate(new FakeEditorDelegate())
 
     await hostPortal.setActiveEditorProxy(hostEditorProxy1)
@@ -383,7 +383,7 @@ suite('Client Integration', () => {
     // client1 hosts a portal with client2 as a guest
     const client1HostPortal = await client1.createPortal()
     const client1BufferProxy = await client1HostPortal.createBufferProxy({uri: 'client-1-buffer', text: ''})
-    const client1EditorProxy = await client1HostPortal.createEditorProxy({bufferProxy: client1BufferProxy, selectionRanges: {}})
+    const client1EditorProxy = await client1HostPortal.createEditorProxy({bufferProxy: client1BufferProxy, selections: {}})
     client1HostPortal.setActiveEditorProxy(client1EditorProxy)
 
     const client2GuestPortalDelegate = new FakePortalDelegate()
@@ -394,7 +394,7 @@ suite('Client Integration', () => {
     // while still participating as a guest in the portal above, client2 hosts a portal with client1 as a guest
     const client2HostPortal = await client2.createPortal()
     const client2BufferProxy = await client2HostPortal.createBufferProxy({uri: 'client-2-buffer', text: ''})
-    const client2EditorProxy = await client2HostPortal.createEditorProxy({bufferProxy: client2BufferProxy, selectionRanges: {}})
+    const client2EditorProxy = await client2HostPortal.createEditorProxy({bufferProxy: client2BufferProxy, selections: {}})
     client2HostPortal.setActiveEditorProxy(client2EditorProxy)
 
     const client1GuestPortalDelegate = new FakePortalDelegate()
