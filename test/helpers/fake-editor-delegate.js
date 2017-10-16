@@ -41,4 +41,12 @@ class Editor {
   clearSelectionsForSiteId (siteId) {
     delete this.selectionsBySiteId[siteId]
   }
+
+  followCursorPosition (position) {
+    this.followedCursorPosition = position
+  }
+
+  getFollowedCursorPosition () {
+    return this.followedCursorPosition
+  }
 }

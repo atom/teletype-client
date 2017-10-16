@@ -177,6 +177,48 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorDelegate1)
   })
 
+  test.skip('following a collaborator within an editor', async () => {
+    const host = await buildClient()
+    const guest = await buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(20) + '\n').repeat(20)})
+    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy,
+      selections: {
+        1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}},
+        2: {range: {start: {row: 8, column: 8}, end: {row: 9, column: 9}}}
+      }
+    })
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+    const guestPortalDelegate = new FakePortalDelegate()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    guestPortal.setDelegate(guestPortalDelegate)
+
+    const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+    const guestEditorDelegate = new FakeEditorDelegate()
+    guestEditorProxy.setDelegate(guestEditorDelegate)
+
+    // Guests immediately jump to host's cursor position after joining.
+    assert.equal(guestEditorProxy.getLeaderSiteId(), hostPortal.getLocalSiteId())
+    assert.deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 9, column: 9})
+
+    // Guests continue to follow host's cursor as it moves.
+    hostEditorProxy.updateSelections({
+      2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
+    })
+    await condition(() => deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 10, column: 10}))
+
+    // When the guest explicitly moves their cursor, stop following host
+    // cursor movements unless the cursor moves out of the guest's viewport
+    guestEditorProxy.setLocalCursorPosition({row: 12, column: 12})
+
+    hostEditorProxy.updateSelections({
+      2: {range: {start: {row: 11, column: 11}, end: {row: 11, column: 11}}}
+    })
+    await condition(() => deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 10, column: 10}))
+  })
+
   test('closing a portal\'s active editor proxy', async () => {
     const host = await buildClient()
     const guest = await buildClient()
