@@ -178,6 +178,50 @@ suite('StarOverlayNetwork', () => {
       ])
     })
 
+    test('disconnecting after encountering an error while joining the network', async () => {
+      const hubPool = await buildPeerPool('hub', server)
+      const spoke1Pool = await buildPeerPool('spoke-1', server)
+      const spoke2Pool = await buildPeerPool('spoke-2', server)
+
+      const hub = buildStarNetwork('network', hubPool, {isHub: true})
+      const spoke1 = buildStarNetwork('network', spoke1Pool, {isHub: false})
+      const spoke2 = buildStarNetwork('network', spoke2Pool, {isHub: false})
+
+      // Prevent spoke-1 from sending connection messages.
+      let originalSpoke1PoolSend = spoke1Pool.send
+      const peerPoolError = new Error('Cannot send messages')
+      spoke1Pool.send = () => { throw peerPoolError }
+
+      let error
+      try {
+        await spoke1.connectTo('hub')
+      } catch (e) {
+        error = e
+      }
+      assert.equal(error, peerPoolError)
+
+      // Re-allow spoke-1 to send messages, and simulate receiving a connection
+      // from another spoke. This will ensure that the disconnection of spoke-1
+      // is ignored.
+      spoke1Pool.send = originalSpoke1PoolSend
+      spoke1.disconnect()
+      spoke2.connectTo('hub')
+
+      await condition(() => (
+        setEqual(hub.getMemberIds(), ['hub', 'spoke-2']) &&
+        setEqual(spoke1.getMemberIds(), ['spoke-1']) &&
+        setEqual(spoke2.getMemberIds(), ['hub', 'spoke-2'])
+      ))
+
+      assert.deepEqual(hub.testJoinEvents, ['spoke-2'])
+      assert.deepEqual(spoke1.testJoinEvents, [])
+      assert.deepEqual(spoke2.testJoinEvents, [])
+
+      assert.deepEqual(hub.testLeaveEvents, [])
+      assert.deepEqual(spoke1.testLeaveEvents, [])
+      assert.deepEqual(spoke2.testLeaveEvents, [])
+    })
+
     test('relaying peer identities to spokes', async () => {
       const hubIdentity = {login: 'hub'}
       const spoke1Identity = {login: 'spoke-1'}
