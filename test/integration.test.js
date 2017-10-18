@@ -203,6 +203,7 @@ suite('Client Integration', () => {
       guestEditorProxy.setDelegate(guestEditorDelegate)
 
       // Guests immediately jump to host's cursor position after joining.
+      assert.equal(guestEditorProxy.getTetherState(), 'retracted')
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 9, column: 9})
 
       // Guests continue to follow host's cursor as it moves.
@@ -215,6 +216,7 @@ suite('Client Integration', () => {
       guestEditorProxy.updateSelections({
         2: {range: {start: {row: 9, column: 9}, end: {row: 9, column: 9}}}
       })
+      assert.equal(guestEditorProxy.getTetherState(), 'extended')
 
       // When the tether is extended, the follower's cursor does not follow
       // the tether's position as long as it remains visible in the viewport
@@ -236,7 +238,8 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 20, column: 20}, end: {row: 20, column: 20}}}
       })
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 20, column: 20}))
+      await condition(() => guestEditorDelegate.getTetherState() === 'retracted')
+      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 20, column: 20})
 
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 21, column: 21}, end: {row: 21, column: 21}}}
@@ -251,14 +254,15 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
-      await condition(() => deepEqual(
+      await condition(() => guestEditorDelegate.getTetherState() === 'disconnected')
+      assert.deepEqual(
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
-      ))
-      assert.notDeepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      )
 
       // Can reconnect tether after disconnecting
       guestEditorProxy.tetherToSiteId(1)
+      assert.equal(guestEditorDelegate.getTetherState(), 'retracted')
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
@@ -271,6 +275,7 @@ suite('Client Integration', () => {
       // view when we indicate a scroll.
       assert(!guestEditorDelegate.isPositionVisible({row: 1, column: 1}))
       guestEditorProxy.didScroll()
+      assert.equal(guestEditorDelegate.getTetherState(), 'disconnected')
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
