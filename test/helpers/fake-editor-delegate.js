@@ -14,6 +14,15 @@ class Editor {
     return this.disposed
   }
 
+  updateViewport (startRow, endRow) {
+    this.viewport = {startRow, endRow}
+  }
+
+  isPositionVisible ({row}) {
+    const {startRow, endRow} = this.viewport
+    return startRow <= row && row <= endRow
+  }
+
   getSelectionsForSiteId (siteId) {
     assert.equal(typeof siteId, 'number', 'siteId must be a number!')
     return this.selectionsBySiteId[siteId]
@@ -42,11 +51,11 @@ class Editor {
     delete this.selectionsBySiteId[siteId]
   }
 
-  followCursorPosition (position) {
-    this.followedCursorPosition = position
+  updateTether (position) {
+    this.tetherPosition = position
   }
 
-  getFollowedCursorPosition () {
-    return this.followedCursorPosition
+  getTetherPosition () {
+    return this.tetherPosition
   }
 }

@@ -5,6 +5,7 @@ const FakeBufferDelegate = require('./helpers/fake-buffer-delegate')
 const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const condition = require('./helpers/condition')
+const timeout = require('./helpers/timeout')
 const {RealTimeClient, Errors} = require('..')
 const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
@@ -177,46 +178,108 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorDelegate1)
   })
 
-  test.skip('following a collaborator within an editor', async () => {
-    const host = await buildClient()
-    const guest = await buildClient()
+  suite('tethering to another participant', () => {
+    test('extending, retracting, and disconnecting', async () => {
+      const host = await buildClient()
+      const guest = await buildClient()
 
-    const hostPortal = await host.createPortal()
-    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(20) + '\n').repeat(20)})
-    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy,
-      selections: {
-        1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}},
-        2: {range: {start: {row: 8, column: 8}, end: {row: 9, column: 9}}}
-      }
+      const hostPortal = await host.createPortal()
+      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy,
+        selections: {
+          1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}},
+          2: {range: {start: {row: 8, column: 8}, end: {row: 9, column: 9}}}
+        }
+      })
+      hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+      const guestPortalDelegate = new FakePortalDelegate()
+      const guestPortal = await guest.joinPortal(hostPortal.id)
+      guestPortal.setDelegate(guestPortalDelegate)
+
+      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+      const guestEditorDelegate = new FakeEditorDelegate()
+      guestEditorDelegate.updateViewport(5, 15)
+      guestEditorProxy.setDelegate(guestEditorDelegate)
+
+      // Guests immediately jump to host's cursor position after joining.
+      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 9, column: 9})
+
+      // Guests continue to follow host's cursor as it moves.
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
+      })
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 10, column: 10}))
+
+      // Extend the tether when the guest explicitly moves their cursor
+      guestEditorProxy.updateSelections({
+        2: {range: {start: {row: 9, column: 9}, end: {row: 9, column: 9}}}
+      })
+
+      // When the tether is extended, the follower's cursor does not follow
+      // the tether's position as long as it remains visible in the viewport
+      assert(guestEditorDelegate.isPositionVisible({row: 11, column: 11}))
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 11, column: 11}, end: {row: 11, column: 11}}}
+      })
+      await condition(() => deepEqual(
+        guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
+        {start: {row: 11, column: 11}, end: {row: 11, column: 11}}
+      ))
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 10, column: 10}))
+
+      // Moves out of the viewport will retract the tether so long as the
+      // tether disconnect window has elapsed since the last cursor movement
+      // by the follower
+      await timeout(guestPortal.tetherDisconnectWindow)
+      assert(!guestEditorDelegate.isPositionVisible({row: 20, column: 20}))
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 20, column: 20}, end: {row: 20, column: 20}}}
+      })
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 20, column: 20}))
+
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 21, column: 21}, end: {row: 21, column: 21}}}
+      })
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 21}))
+
+      // Disconnects the tether if it moves off screen within the disconnect
+      // window of the follower moving their cursor
+      guestEditorProxy.updateSelections({
+        2: {range: {start: {row: 22, column: 22}, end: {row: 22, column: 22}}}
+      })
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      })
+      await condition(() => deepEqual(
+        guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
+        {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
+      ))
+      assert.notDeepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+
+      // Can reconnect tether after disconnecting
+      guestEditorProxy.tetherToSiteId(1)
+      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
+      })
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 1, column: 1}))
+
+      // Disconnect tether when we scroll out of view. In real life, the
+      // viewport would have changed when we reconnected the tether, but in
+      // this test we're only concerned with the tether position being out of
+      // view when we indicate a scroll.
+      assert(!guestEditorDelegate.isPositionVisible({row: 1, column: 1}))
+      guestEditorProxy.didScroll()
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      })
+      await condition(() => deepEqual(
+        guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
+        {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
+      ))
+      assert.notDeepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
     })
-    hostPortal.setActiveEditorProxy(hostEditorProxy)
-
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
-
-    const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
-    const guestEditorDelegate = new FakeEditorDelegate()
-    guestEditorProxy.setDelegate(guestEditorDelegate)
-
-    // Guests immediately jump to host's cursor position after joining.
-    assert.equal(guestEditorProxy.getLeaderSiteId(), hostPortal.getLocalSiteId())
-    assert.deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 9, column: 9})
-
-    // Guests continue to follow host's cursor as it moves.
-    hostEditorProxy.updateSelections({
-      2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
-    })
-    await condition(() => deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 10, column: 10}))
-
-    // When the guest explicitly moves their cursor, stop following host
-    // cursor movements unless the cursor moves out of the guest's viewport
-    guestEditorProxy.setLocalCursorPosition({row: 12, column: 12})
-
-    hostEditorProxy.updateSelections({
-      2: {range: {start: {row: 11, column: 11}, end: {row: 11, column: 11}}}
-    })
-    await condition(() => deepEqual(guestEditorDelegate.getFollowedCursorPosition(), {row: 10, column: 10}))
   })
 
   test('closing a portal\'s active editor proxy', async () => {
