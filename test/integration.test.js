@@ -68,7 +68,7 @@ suite('Client Integration', () => {
     const hostEditorDelegate = new FakeEditorDelegate()
     hostEditorProxy.setDelegate(hostEditorDelegate)
     assert(!hostEditorDelegate.getSelectionsForSiteId(1))
-    await hostPortal.setActiveEditorProxy(hostEditorProxy)
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
@@ -295,14 +295,14 @@ suite('Client Integration', () => {
     guestPortal.setDelegate(guestPortalDelegate)
     assert(guestPortalDelegate.getActiveEditorProxy() === null)
 
-    await hostPortal.setActiveEditorProxy(hostEditorProxy)
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
     await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
     assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
 
-    await hostPortal.setActiveEditorProxy(null)
+    hostPortal.setActiveEditorProxy(null)
     await condition(() => guestPortalDelegate.getActiveEditorProxy() == null)
 
-    await hostPortal.setActiveEditorProxy(hostEditorProxy)
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
     await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
     assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
   })
@@ -319,7 +319,7 @@ suite('Client Integration', () => {
     const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
     hostEditorProxy2.setDelegate(new FakeEditorDelegate())
 
-    await hostPortal.setActiveEditorProxy(hostEditorProxy1)
+    hostPortal.setActiveEditorProxy(hostEditorProxy1)
 
     const guestPortal = await guest.joinPortal(hostPortal.id)
     const guestPortalDelegate = new FakePortalDelegate()
@@ -383,7 +383,7 @@ suite('Client Integration', () => {
       const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
       hostEditorDelegate = new FakeEditorDelegate()
       hostEditorProxy.setDelegate(hostEditorDelegate)
-      await hostPortal.setActiveEditorProxy(hostEditorProxy)
+      hostPortal.setActiveEditorProxy(hostEditorProxy)
 
       await condition(() =>
         guest1PortalDelegate.getActiveEditorProxy() != null &&
