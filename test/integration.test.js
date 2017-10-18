@@ -280,6 +280,66 @@ suite('Client Integration', () => {
       ))
       assert.notDeepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
     })
+
+    test('showing and hiding selections when tether states change', async () => {
+      const host = await buildClient()
+      const hostPortal = await host.createPortal()
+      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {
+        1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}}
+      }})
+      const hostEditorDelegate = new FakeEditorDelegate()
+      hostEditorProxy.setDelegate(hostEditorDelegate)
+      hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+      const guest = await buildClient()
+      const guestPortalDelegate = new FakePortalDelegate()
+      const guestPortal = await guest.joinPortal(hostPortal.id)
+      guestPortal.setDelegate(guestPortalDelegate)
+      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+      const guestEditorDelegate = new FakeEditorDelegate()
+      guestEditorProxy.setDelegate(guestEditorDelegate)
+      guestEditorProxy.updateSelections({
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      }, true)
+
+      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 6, column: 6})
+
+      // Cursors are not rendered locally or remotely for followers with
+      // retracted tethers
+      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+
+      // When the tether is extended, selections appear
+      guestEditorProxy.updateSelections({
+        1: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
+      })
+      await condition(() => {
+        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        return selection && deepEqual(selection.range, {start: {row: 1, column: 1}, end: {row: 1, column: 1}})
+      })
+
+      // Selections disappear when the tether is retracted again
+      await timeout(guestEditorProxy.tetherDisconnectWindow)
+      guestEditorDelegate.updateViewport(0, 6)
+      hostEditorProxy.updateSelections({
+        1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
+      })
+      await condition(() => deepEqual(guestEditorProxy.getTetherPosition(), {row: 12, column: 12}))
+      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+
+      // Disconnecting the tether shows the selections again
+      guestEditorDelegate.updateViewport(6, 15)
+      guestEditorProxy.updateSelections({
+        1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
+      })
+      hostEditorProxy.updateSelections({
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      })
+      await condition(() => {
+        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        return selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}})
+      })
+    })
   })
 
   test('closing a portal\'s active editor proxy', async () => {
