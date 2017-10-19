@@ -436,6 +436,82 @@ suite('Client Integration', () => {
         )
       })
     })
+
+    test('transitive tethering (with cycles)', async () => {
+      const host = await buildClient()
+      const guest1 = await buildClient()
+      const guest2 = await buildClient()
+
+      const hostPortal = await host.createPortal()
+      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy = await hostPortal.createEditorProxy({
+        bufferProxy: hostBufferProxy,
+        selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
+      })
+      const hostEditorDelegate = new FakeEditorDelegate()
+      hostEditorProxy.setDelegate(hostEditorDelegate)
+      hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+      const guest1PortalDelegate = new FakePortalDelegate()
+      const guest1Portal = await guest1.joinPortal(hostPortal.id)
+      guest1Portal.setDelegate(guest1PortalDelegate)
+
+      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1EditorDelegate = new FakeEditorDelegate()
+      guest1EditorDelegate.updateViewport(5, 15)
+      guest1EditorProxy.setDelegate(guest1EditorDelegate)
+
+      const guest2PortalDelegate = new FakePortalDelegate()
+      const guest2Portal = await guest2.joinPortal(hostPortal.id)
+      guest2Portal.setDelegate(guest2PortalDelegate)
+
+      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2EditorDelegate = new FakeEditorDelegate()
+      guest2EditorDelegate.updateViewport(5, 15)
+      guest2EditorProxy.setDelegate(guest2EditorDelegate)
+
+      // Form a cycle (guest1 -> guest2 -> host -> guest1) and ensure it gets
+      // broken on the site with the lowest site id.
+      guest1EditorProxy.tetherToSiteId(guest2Portal.siteId)
+      guest2EditorProxy.tetherToSiteId(hostPortal.siteId)
+      hostEditorProxy.tetherToSiteId(guest1Portal.siteId)
+
+      await condition(() => (
+        hostEditorProxy.getTetherSiteId() == null &&
+        guest1EditorProxy.getTetherSiteId() === hostPortal.siteId &&
+        guest2EditorProxy.getTetherSiteId() === hostPortal.siteId
+      ))
+
+      assert(!hostEditorDelegate.getTetherState())
+      assert(!hostEditorDelegate.getTetherPosition())
+
+      assert.equal(guest1EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 5, column: 5})
+
+      assert.equal(guest2EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 5, column: 5})
+
+      // The site which breaks the cycle becomes the leader.
+      guest1EditorProxy.untether()
+      guest1EditorProxy.updateSelections({
+        1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
+      })
+
+      await condition(() => (
+        hostEditorProxy.getTetherSiteId() === guest1Portal.siteId &&
+        guest1EditorProxy.getTetherSiteId() == null &&
+        guest2EditorProxy.getTetherSiteId() === guest1Portal.siteId
+      ))
+
+      assert.equal(hostEditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 13, column: 13})
+
+      assert(!guest1EditorDelegate.getTetherPosition())
+      assert(!guest1EditorDelegate.getTetherState())
+
+      assert.equal(guest2EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13})
+    })
   })
 
   test('closing a portal\'s active editor proxy', async () => {
