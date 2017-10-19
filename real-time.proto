@@ -32,7 +32,20 @@ message EditorProxy {
 }
 
 message EditorProxyUpdate {
-  map<uint32, uint32> selection_layer_ids_by_site_id = 1;
+  oneof variant {
+    SelectionsUpdate selections_update = 1;
+    TetherUpdate tether_update = 2;
+  }
+
+  message SelectionsUpdate {
+    map<uint32, uint32> selection_layer_ids_by_site_id = 1;
+  }
+
+  message TetherUpdate {
+    uint32 sender_site_id = 1;
+    uint32 tether_site_id = 2;
+    uint32 tether_state = 3;
+  }
 }
 
 message BufferProxy {
