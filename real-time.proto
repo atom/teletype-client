@@ -42,9 +42,9 @@ message EditorProxyUpdate {
   }
 
   message TetherUpdate {
-    uint32 sender_site_id = 1;
-    uint32 tether_site_id = 2;
-    uint32 tether_state = 3;
+    uint32 follower_site_id = 1;
+    uint32 leader_site_id = 2;
+    uint32 state = 3;
   }
 }
 

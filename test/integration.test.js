@@ -772,6 +772,7 @@ suite('Client Integration', () => {
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
+      tetherDisconnectWindow: 100,
       testEpoch
     })
     // Ensure we don't blow up if we call `initialize` a second time before
