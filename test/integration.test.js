@@ -203,7 +203,7 @@ suite('Client Integration', () => {
       guestEditorProxy.setDelegate(guestEditorDelegate)
 
       // Guests immediately jump to host's cursor position after joining.
-      assert.equal(guestEditorProxy.getTetherState(), TetherState.RETRACTED)
+      assert.equal(guestEditorProxy.resolveTetherState(), TetherState.RETRACTED)
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 9, column: 9})
 
       // Guests continue to follow host's cursor as it moves.
@@ -216,7 +216,7 @@ suite('Client Integration', () => {
       guestEditorProxy.updateSelections({
         2: {range: {start: {row: 9, column: 9}, end: {row: 9, column: 9}}}
       })
-      assert.equal(guestEditorProxy.getTetherState(), TetherState.EXTENDED)
+      assert.equal(guestEditorProxy.resolveTetherState(), TetherState.EXTENDED)
 
       // When the tether is extended, the follower's cursor does not follow
       // the tether's position as long as it remains visible in the viewport
@@ -329,7 +329,7 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
-      await condition(() => deepEqual(guestEditorProxy.getTetherPosition(), {row: 12, column: 12}))
+      await condition(() => deepEqual(guestEditorProxy.resolveTetherPosition(), {row: 12, column: 12}))
       await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
 
       // Disconnecting the tether shows the selections again
@@ -477,9 +477,9 @@ suite('Client Integration', () => {
       hostEditorProxy.tetherToSiteId(guest1Portal.siteId)
 
       await condition(() => (
-        hostEditorProxy.getTetherSiteId() == null &&
-        guest1EditorProxy.getTetherSiteId() === hostPortal.siteId &&
-        guest2EditorProxy.getTetherSiteId() === hostPortal.siteId
+        hostEditorProxy.resolveTetherSiteId() == null &&
+        guest1EditorProxy.resolveTetherSiteId() === hostPortal.siteId &&
+        guest2EditorProxy.resolveTetherSiteId() === hostPortal.siteId
       ))
 
       assert(!hostEditorDelegate.getTetherState())
@@ -498,9 +498,9 @@ suite('Client Integration', () => {
       guest1EditorProxy.untether()
 
       await condition(() => (
-        hostEditorProxy.getTetherSiteId() === guest1Portal.siteId &&
-        guest1EditorProxy.getTetherSiteId() == null &&
-        guest2EditorProxy.getTetherSiteId() === guest1Portal.siteId
+        hostEditorProxy.resolveTetherSiteId() === guest1Portal.siteId &&
+        guest1EditorProxy.resolveTetherSiteId() == null &&
+        guest2EditorProxy.resolveTetherSiteId() === guest1Portal.siteId
       ))
 
       assert.equal(hostEditorDelegate.getTetherState(), TetherState.RETRACTED)
