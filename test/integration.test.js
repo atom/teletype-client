@@ -492,10 +492,10 @@ suite('Client Integration', () => {
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
       // The site which breaks the cycle becomes the leader.
-      guest1EditorProxy.untether()
       guest1EditorProxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
+      guest1EditorProxy.untether()
 
       await condition(() => (
         hostEditorProxy.getTetherSiteId() === guest1Portal.siteId &&
