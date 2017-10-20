@@ -19,8 +19,12 @@ class Editor {
   }
 
   isPositionVisible ({row}) {
-    const {startRow, endRow} = this.viewport
-    return startRow <= row && row <= endRow
+    if (this.viewport) {
+      const {startRow, endRow} = this.viewport
+      return startRow <= row && row <= endRow
+    } else {
+      return false
+    }
   }
 
   getSelectionsForSiteId (siteId) {

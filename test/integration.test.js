@@ -178,7 +178,7 @@ suite('Client Integration', () => {
     assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorDelegate1)
   })
 
-  suite.only('tethering to other participants', () => {
+  suite('tethering to other participants', () => {
     test('extending, retracting, and disconnecting', async () => {
       const host = await buildClient()
       const guest = await buildClient()
