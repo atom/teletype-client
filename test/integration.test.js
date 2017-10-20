@@ -6,7 +6,7 @@ const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const condition = require('./helpers/condition')
 const timeout = require('./helpers/timeout')
-const {RealTimeClient, TetherState, Errors} = require('..')
+const {RealTimeClient, FollowState, Errors} = require('..')
 const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
 const {startTestServer} = require('@atom/real-time-server')
@@ -203,7 +203,7 @@ suite('Client Integration', () => {
       guestEditorProxy.setDelegate(guestEditorDelegate)
 
       // Guests immediately jump to host's cursor position after joining.
-      assert.equal(guestEditorProxy.resolveTetherState(), TetherState.RETRACTED)
+      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.RETRACTED)
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 9, column: 9})
 
       // Guests continue to follow host's cursor as it moves.
@@ -216,7 +216,7 @@ suite('Client Integration', () => {
       guestEditorProxy.updateSelections({
         2: {range: {start: {row: 9, column: 9}, end: {row: 9, column: 9}}}
       })
-      assert.equal(guestEditorProxy.resolveTetherState(), TetherState.EXTENDED)
+      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.EXTENDED)
 
       // When the tether is extended, the follower's cursor does not follow
       // the tether's position as long as it remains visible in the viewport
@@ -238,7 +238,7 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 20, column: 20}, end: {row: 20, column: 20}}}
       })
-      await condition(() => guestEditorDelegate.getTetherState() === TetherState.RETRACTED)
+      await condition(() => guestEditorDelegate.getTetherState() === FollowState.RETRACTED)
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 20, column: 20})
 
       hostEditorProxy.updateSelections({
@@ -254,15 +254,15 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
-      await condition(() => guestEditorDelegate.getTetherState() === TetherState.DISCONNECTED)
+      await condition(() => guestEditorDelegate.getTetherState() === FollowState.DISCONNECTED)
       assert.deepEqual(
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
       )
 
       // Can reconnect tether after disconnecting
-      guestEditorProxy.tetherToSiteId(1)
-      assert.equal(guestEditorDelegate.getTetherState(), TetherState.RETRACTED)
+      guestEditorProxy.followSiteId(1)
+      assert.equal(guestEditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
@@ -275,7 +275,7 @@ suite('Client Integration', () => {
       // view when we indicate a scroll.
       assert(!guestEditorDelegate.isPositionVisible({row: 1, column: 1}))
       guestEditorProxy.didScroll()
-      assert.equal(guestEditorDelegate.getTetherState(), TetherState.DISCONNECTED)
+      assert.equal(guestEditorDelegate.getTetherState(), FollowState.DISCONNECTED)
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
@@ -329,7 +329,7 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
-      await condition(() => deepEqual(guestEditorProxy.resolveTetherPosition(), {row: 12, column: 12}))
+      await condition(() => deepEqual(guestEditorProxy.resolveLeaderPosition(), {row: 12, column: 12}))
       await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
 
       // Disconnecting the tether shows the selections again
@@ -381,8 +381,8 @@ suite('Client Integration', () => {
 
       // Guest1 follows the host, and Guest2 follows Guest1. This has the effect
       // of making Guest2 follow the host.
-      guest1EditorProxy.tetherToSiteId(1)
-      guest2EditorProxy.tetherToSiteId(2)
+      guest1EditorProxy.followSiteId(1)
+      guest2EditorProxy.followSiteId(2)
       hostEditorProxy.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
@@ -472,44 +472,44 @@ suite('Client Integration', () => {
 
       // Form a cycle (guest1 -> guest2 -> host -> guest1) and ensure it gets
       // broken on the site with the lowest site id.
-      guest1EditorProxy.tetherToSiteId(guest2Portal.siteId)
-      guest2EditorProxy.tetherToSiteId(hostPortal.siteId)
-      hostEditorProxy.tetherToSiteId(guest1Portal.siteId)
+      guest1EditorProxy.followSiteId(guest2Portal.siteId)
+      guest2EditorProxy.followSiteId(hostPortal.siteId)
+      hostEditorProxy.followSiteId(guest1Portal.siteId)
 
       await condition(() => (
-        hostEditorProxy.resolveTetherSiteId() == null &&
-        guest1EditorProxy.resolveTetherSiteId() === hostPortal.siteId &&
-        guest2EditorProxy.resolveTetherSiteId() === hostPortal.siteId
+        hostEditorProxy.resolveLeaderSiteId() == hostPortal.siteId &&
+        guest1EditorProxy.resolveLeaderSiteId() === hostPortal.siteId &&
+        guest2EditorProxy.resolveLeaderSiteId() === hostPortal.siteId
       ))
 
-      assert(!hostEditorDelegate.getTetherState())
-      assert(!hostEditorDelegate.getTetherPosition())
+      assert.equal(hostEditorDelegate.getTetherState(), FollowState.DISCONNECTED)
+      assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
-      assert.equal(guest1EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.equal(guest1EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
-      assert.equal(guest2EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
       // The site which breaks the cycle becomes the leader.
       guest1EditorProxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      guest1EditorProxy.untether()
+      guest1EditorProxy.unfollow()
 
       await condition(() => (
-        hostEditorProxy.resolveTetherSiteId() === guest1Portal.siteId &&
-        guest1EditorProxy.resolveTetherSiteId() == null &&
-        guest2EditorProxy.resolveTetherSiteId() === guest1Portal.siteId
+        hostEditorProxy.resolveLeaderSiteId() === guest1Portal.siteId &&
+        guest1EditorProxy.resolveLeaderSiteId() == guest1Portal.siteId &&
+        guest2EditorProxy.resolveLeaderSiteId() === guest1Portal.siteId
       ))
 
-      assert.equal(hostEditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.equal(hostEditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 13, column: 13})
 
-      assert(!guest1EditorDelegate.getTetherPosition())
-      assert(!guest1EditorDelegate.getTetherState())
+      assert.equal(guest1EditorDelegate.getTetherState(), FollowState.DISCONNECTED)
+      assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 13, column: 13})
 
-      assert.equal(guest2EditorDelegate.getTetherState(), TetherState.RETRACTED)
+      assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13})
     })
   })
@@ -781,5 +781,16 @@ suite('Client Integration', () => {
     await client.signIn('token-' + tokenCount++)
 
     return client
+  }
+
+  function range (start, end) {
+    return {
+      start: point(...start),
+      end: point(...end)
+    }
+  }
+
+  function point (row, column) {
+    return {row, column}
   }
 })

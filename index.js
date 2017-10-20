@@ -1,5 +1,5 @@
 const RealTimeClient = require('./lib/real-time-client')
-const TetherState = require('./lib/tether-state')
+const FollowState = require('./lib/follow-state')
 const Errors = require('./lib/errors')
 
-module.exports = {RealTimeClient, TetherState, Errors}
+module.exports = {RealTimeClient, FollowState, Errors}
