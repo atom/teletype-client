@@ -4,6 +4,7 @@ module.exports =
 class Editor {
   constructor () {
     this.selectionsBySiteId = {}
+    this.activePositionsBySiteId = {}
   }
 
   dispose () {
@@ -25,6 +26,14 @@ class Editor {
     } else {
       return false
     }
+  }
+
+  activePositionForSiteId (siteId) {
+    return this.activePositionsBySiteId[siteId]
+  }
+
+  updateActivePositions (activePositionsBySiteId) {
+    this.activePositionsBySiteId = activePositionsBySiteId
   }
 
   getSelectionsForSiteId (siteId) {

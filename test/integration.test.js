@@ -261,7 +261,7 @@ suite('Client Integration', () => {
       )
 
       // Can reconnect tether after disconnecting
-      guestEditorProxy.followSiteId(1)
+      guestEditorProxy.follow(1)
       assert.equal(guestEditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
       hostEditorProxy.updateSelections({
@@ -381,8 +381,8 @@ suite('Client Integration', () => {
 
       // Guest1 follows the host, and Guest2 follows Guest1. This has the effect
       // of making Guest2 follow the host.
-      guest1EditorProxy.followSiteId(1)
-      guest2EditorProxy.followSiteId(2)
+      guest1EditorProxy.follow(1)
+      guest2EditorProxy.follow(2)
       hostEditorProxy.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
@@ -472,9 +472,9 @@ suite('Client Integration', () => {
 
       // Form a cycle (guest1 -> guest2 -> host -> guest1) and ensure it gets
       // broken on the site with the lowest site id.
-      guest1EditorProxy.followSiteId(guest2Portal.siteId)
-      guest2EditorProxy.followSiteId(hostPortal.siteId)
-      hostEditorProxy.followSiteId(guest1Portal.siteId)
+      guest1EditorProxy.follow(guest2Portal.siteId)
+      guest2EditorProxy.follow(hostPortal.siteId)
+      hostEditorProxy.follow(guest1Portal.siteId)
 
       await condition(() => (
         hostEditorProxy.resolveLeaderSiteId() == hostPortal.siteId &&
@@ -512,6 +512,65 @@ suite('Client Integration', () => {
       assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13})
     })
+  })
+
+  test('active positions of other collaborators', async () => {
+    const host = await buildClient()
+    const guest1 = await buildClient()
+    const guest2 = await buildClient()
+
+    const hostPortal = await host.createPortal()
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-uri', text: ('x'.repeat(30) + '\n').repeat(30)})
+    const hostEditorProxy = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy,
+      selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
+    })
+    const hostEditorDelegate = new FakeEditorDelegate()
+    hostEditorProxy.setDelegate(hostEditorDelegate)
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+    const guest1PortalDelegate = new FakePortalDelegate()
+    const guest1Portal = await guest1.joinPortal(hostPortal.id)
+    guest1Portal.setDelegate(guest1PortalDelegate)
+
+    const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+    const guest1EditorDelegate = new FakeEditorDelegate()
+    guest1EditorProxy.setDelegate(guest1EditorDelegate)
+
+    const guest2PortalDelegate = new FakePortalDelegate()
+    const guest2Portal = await guest2.joinPortal(hostPortal.id)
+    guest2Portal.setDelegate(guest2PortalDelegate)
+
+    const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+    const guest2EditorDelegate = new FakeEditorDelegate()
+    guest2EditorProxy.setDelegate(guest2EditorDelegate)
+
+    hostEditorProxy.updateSelections({
+      1: {range: range([5, 4], [9, 6])},
+      2: {range: range([2, 7], [4, 4])}
+    })
+
+    await condition(() => (
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 4)) &&
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 4))
+    ))
+
+    guest1EditorProxy.updateSelections({
+      1: {range: range([5, 4], [9, 6]), reversed: true}
+    })
+    guest2EditorProxy.follow(guest1EditorProxy.siteId)
+    await condition(() => (
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4))
+    ))
   })
 
   test('closing a portal\'s active editor proxy', async () => {
