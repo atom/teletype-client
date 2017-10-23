@@ -593,6 +593,13 @@ suite('Client Integration', () => {
       deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
       deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4))
     ))
+
+    // Update active positions after a site disconnects.
+    guest2Portal.dispose()
+    await condition(() => (
+      !hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId) &&
+      !guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId)
+    ))
   })
 
   test('closing a portal\'s active editor proxy', async () => {
