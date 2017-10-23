@@ -381,8 +381,8 @@ suite('Client Integration', () => {
 
       // Guest1 follows the host, and Guest2 follows Guest1. This has the effect
       // of making Guest2 follow the host.
-      guest1EditorProxy.follow(1)
-      guest2EditorProxy.follow(2)
+      guest1EditorProxy.follow(hostPortal.siteId)
+      guest2EditorProxy.follow(guest1Portal.siteId)
       hostEditorProxy.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
@@ -419,6 +419,28 @@ suite('Client Integration', () => {
         deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
       ))
 
+      // Ensure transitive following works for new sites that join after
+      // tethering has already been established.
+      const guest3 = await buildClient()
+      const guest3PortalDelegate = new FakePortalDelegate()
+      const guest3Portal = await guest3.joinPortal(hostPortal.id)
+      guest3Portal.setDelegate(guest3PortalDelegate)
+
+      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3EditorDelegate = new FakeEditorDelegate()
+      guest3EditorDelegate.updateViewport(5, 15)
+      guest3EditorProxy.setDelegate(guest3EditorDelegate)
+
+      guest3EditorProxy.follow(guest2Portal.siteId)
+      await condition(() => (
+        deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(guest3EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
+        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
+        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId), {})
+      ))
+
       // Disconnecting the tether on Guest1 breaks transitivity.
       guest1EditorDelegate.updateViewport(6, 15)
       guest1EditorProxy.updateSelections({
@@ -428,7 +450,7 @@ suite('Client Integration', () => {
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
         return (
           selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}}) &&
           deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13}) &&
