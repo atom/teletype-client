@@ -53,24 +53,53 @@ suite('RealTimeClient', () => {
     })
   })
 
-  suite('createPortal', () => {
-    test('returns null if the token is invalid', async () => {
-      const client = new RealTimeClient({restGateway: {}})
-      client.verifyOauthToken = async function () {
-        return {success: false}
+  suite('signIn(oauthToken)', () => {
+    test('throws when the server replies with an unexpected status code', async () => {
+      const stubRestGateway = {
+        setOauthToken () {}
       }
+      const client = new RealTimeClient({restGateway: stubRestGateway})
 
-      assert(!await client.createPortal())
+      {
+        let error
+        try {
+          stubRestGateway.get = function () {
+            return {ok: false, status: 489, body: {message: 'some-error'}}
+          }
+          await client.signIn('token')
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.UnexpectedAuthenticationError)
+        assert(error.message.includes('some-error'))
+      }
     })
 
+    test('throws when contacting the server fails', async () => {
+      const stubRestGateway = {
+        setOauthToken () {}
+      }
+      const client = new RealTimeClient({restGateway: stubRestGateway})
+
+      {
+        let error
+        try {
+          stubRestGateway.get = function () {
+            throw new Error('Failed to fetch')
+          }
+          await client.signIn('token')
+        } catch (e) {
+          error = e
+        }
+        assert(error instanceof Errors.UnexpectedAuthenticationError)
+      }
+    })
+  })
+
+  suite('createPortal', () => {
     test('throws if posting the portal to the server fails', async () => {
       const stubRestGateway = {}
-      const client = new RealTimeClient({
-        restGateway: stubRestGateway,
-      })
-      client.verifyOauthToken = async function () {
-        return {success: true}
-      }
+      const client = new RealTimeClient({restGateway: stubRestGateway})
 
       {
         let error
@@ -101,15 +130,6 @@ suite('RealTimeClient', () => {
   })
 
   suite('joinPortal', () => {
-    test('returns null if the token is invalid', async () => {
-      const client = new RealTimeClient({restGateway: {}})
-      client.verifyOauthToken = async function () {
-        return {success: false}
-      }
-
-      assert(!await client.joinPortal('some-portal'))
-    })
-
     test('throws if retrieving the portal from the server fails', async () => {
       const stubRestGateway = {}
       const client = new RealTimeClient({restGateway: stubRestGateway})
@@ -148,6 +168,7 @@ suite('RealTimeClient', () => {
   suite('onConnectionError', () => {
     test('fires if the underlying PeerPool emits an error', async () => {
       const stubRestGateway = {
+        setOauthToken () {},
         get () {
           return Promise.resolve({ok: true, body: []})
         }
@@ -156,7 +177,11 @@ suite('RealTimeClient', () => {
         getClientId () {
           return Promise.resolve('')
         },
-        subscribe () {}
+        subscribe () {
+          return Promise.resolve({
+            dispose () {}
+          })
+        }
       }
       const errorEvents = []
       const client = new RealTimeClient({
@@ -165,6 +190,7 @@ suite('RealTimeClient', () => {
       })
       client.onConnectionError((error) => errorEvents.push(error))
       await client.initialize()
+      await client.signIn('some-token')
 
       const errorEvent1 = new ErrorEvent('')
       client.peerPool.emitter.emit('error', errorEvent1)
@@ -173,128 +199,6 @@ suite('RealTimeClient', () => {
       const errorEvent2 = new ErrorEvent('')
       client.peerPool.emitter.emit('error', errorEvent2)
       assert.deepEqual(errorEvents, [errorEvent1, errorEvent2])
-    })
-  })
-
-  suite('signIn(token)', () => {
-    test('returns true and emits an event when the given token is valid', async () => {
-      const stubRestGateway = {
-        get (url) {
-          return {ok: true, status: 200, body: {login: 'some-user'}}
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: {},
-        restGateway: stubRestGateway
-      })
-      client.peerPool = {
-        setLocalPeerIdentity (token, identity) {
-          this.identity = identity
-        },
-        getLocalPeerIdentity () {
-          return this.identity
-        }
-      }
-
-      let signInChangeEventsCount = 0
-      client.onSignInChange(() => signInChangeEventsCount++)
-
-      const signedIn = await client.signIn('some-token')
-      assert(signedIn)
-      assert(client.isSignedIn())
-      assert.deepEqual(client.getLocalUserIdentity(), {login: 'some-user'})
-      assert.equal(signInChangeEventsCount, 1)
-    })
-
-    test('returns false when the given token is invalid', async () => {
-      const stubRestGateway = {
-        get (url) {
-          return {ok: false, status: 401, body: {}}
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: {},
-        restGateway: stubRestGateway
-      })
-
-      assert(!await client.signIn('some-token'))
-    })
-  })
-
-  suite('verifyOauthToken', () => {
-    test('returns the identity of the user with the given token', async () => {
-      const stubRestGateway = {
-        get (url) {
-          return {ok: true, status: 200, body: {login: 'some-user'}}
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: {},
-        restGateway: stubRestGateway
-      })
-
-      const {success, identity} = await client.verifyOauthToken()
-      assert(success)
-      assert.deepEqual(identity, {login: 'some-user'})
-    })
-
-    test('signs out the client when the given token is invalid', async () => {
-      const stubRestGateway = {
-        get (url) {
-          return {ok: false, status: 401, body: {}}
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: {},
-        restGateway: stubRestGateway
-      })
-      client.peerPool = {
-        oauthToken: 'some-token',
-        identity: {login: 'some-user'},
-        disconnected: false,
-        disconnect () {
-          this.disconnected = true
-        },
-        setLocalPeerIdentity (oauthToken, identity) {
-          this.oauthToken = oauthToken
-          this.identity = identity
-        },
-        getLocalPeerIdentity () {
-          return this.identity
-        }
-      }
-      client.signedIn = true
-
-      let signInChangeEventsCount = 0
-      client.onSignInChange(() => signInChangeEventsCount++)
-
-      const {success} = await client.verifyOauthToken()
-      assert(!success)
-      assert(!client.signedIn)
-      assert(!client.getLocalUserIdentity())
-      assert(!client.peerPool.oauthToken)
-      assert(client.peerPool.disconnected)
-      assert.equal(signInChangeEventsCount, 1)
-    })
-
-    test('throws when an unexpected authentication failure occurs', async () => {
-      const stubRestGateway = {
-        get (url) {
-          return {ok: false, status: 500, body: 'whoops'}
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: {},
-        restGateway: stubRestGateway
-      })
-
-      let error
-      try {
-        await client.verifyOauthToken()
-      } catch (e) {
-        error = e
-      }
-      assert(error instanceof Errors.UnexpectedAuthenticationError)
     })
   })
 })

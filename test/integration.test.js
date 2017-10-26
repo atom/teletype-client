@@ -429,18 +429,95 @@ suite('Client Integration', () => {
     }
   })
 
-  let tokenCount = 0
-  async function buildClient () {
+  suite('authentication', () => {
+    test('signing in using a valid token', async () => {
+      const client = await buildClient({signIn: false})
+
+      server.identityProvider.setIdentitiesByToken({
+        'token-1': {login: 'user-1'},
+        'token-2': {login: 'user-2'}
+      })
+
+      assert(await client.signIn('token-1'))
+      assert(client.isSignedIn())
+      assert.deepEqual(client.getLocalUserIdentity(), {login: 'user-1'})
+      assert.equal(client.testSignInChangeEvents.length, 1)
+      assert(!client.peerPool.disposed)
+
+      const {peerPool} = client
+      client.signOut()
+      assert(!client.isSignedIn())
+      assert(!client.getLocalUserIdentity())
+      assert.equal(client.testSignInChangeEvents.length, 2)
+      assert(peerPool.disposed)
+
+      assert(await client.signIn('token-2'))
+      assert(client.isSignedIn())
+      assert.deepEqual(client.getLocalUserIdentity(), {login: 'user-2'})
+      assert.equal(client.testSignInChangeEvents.length, 3)
+      assert(!client.peerPool.disposed)
+    })
+
+    test('signing in using an invalid token', async () => {
+      const client = await buildClient({signIn: false})
+
+      server.identityProvider.setIdentitiesByToken({
+        'invalid-token': null
+      })
+
+      assert(!await client.signIn('invalid-token'))
+      assert(!client.isSignedIn())
+      assert(!client.getLocalUserIdentity())
+      assert.equal(client.testSignInChangeEvents.length, 0)
+    })
+
+    test('creating a portal after auth token has been revoked', async () => {
+      const client = await buildClient({signIn: false})
+
+      await client.signIn('some-token')
+      assert(client.isSignedIn())
+
+      server.identityProvider.setIdentitiesByToken({
+        'some-token': null
+      })
+
+      assert(!await client.createPortal())
+      assert(!client.isSignedIn())
+    })
+
+    test('joining a portal after auth token has been revoked', async () => {
+      const client = await buildClient({signIn: false})
+
+      await client.signIn('some-token')
+      assert(client.isSignedIn())
+
+      server.identityProvider.setIdentitiesByToken({
+        'some-token': null
+      })
+
+      assert(!await client.joinPortal('some-portal'))
+      assert(!client.isSignedIn())
+    })
+  })
+
+  let nextTokenId = 1
+  async function buildClient (options={}) {
     const client = new RealTimeClient({
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),
       testEpoch
     })
+
+    client.testSignInChangeEvents = []
+    client.onSignInChange((event) => client.testSignInChangeEvents.push(event))
+
     // Ensure we don't blow up if we call `initialize` a second time before
     // finishing initialization.
     await Promise.all([client.initialize(), client.initialize()])
-    await client.signIn('token-' + tokenCount++)
+    if (options.signIn !== false) {
+      await client.signIn('token-' + nextTokenId++)
+    }
 
     return client
   }
