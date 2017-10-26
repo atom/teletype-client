@@ -28,23 +28,14 @@ suite('PeerPool', () => {
   })
 
   test('connection and sending messages between peers', async () => {
-    const peer1Identity = {login: 'identity-1'}
-    const peer2Identity = {login: 'identity-2'}
-    const peer3Identity = {login: 'identity-3'}
-    server.identityProvider.setIdentitiesByToken({
-      '1-token': peer1Identity,
-      '2-token': peer2Identity,
-      '3-token': peer3Identity
-    })
-
     const peer1Pool = await buildPeerPool('1', server)
     const peer2Pool = await buildPeerPool('2', server)
     const peer3Pool = await buildPeerPool('3', server)
 
     // Local peer identities
-    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), peer1Identity)
-    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), peer2Identity)
-    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), peer3Identity)
+    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), {login: 'user-with-token-1-token'})
+    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), {login: 'user-with-token-2-token'})
+    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), {login: 'user-with-token-3-token'})
 
     // Connection
     await peer1Pool.connectTo('3')
@@ -56,10 +47,10 @@ suite('PeerPool', () => {
     await peer3Pool.getConnectedPromise('2')
 
     // Remote peer identities
-    assert.deepEqual(peer1Pool.getPeerIdentity('3'), peer3Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('1'), peer1Identity)
-    assert.deepEqual(peer2Pool.getPeerIdentity('3'), peer3Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('2'), peer2Identity)
+    assert.deepEqual(peer1Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
+    assert.deepEqual(peer3Pool.getPeerIdentity('1'), {login: 'user-with-token-1-token'})
+    assert.deepEqual(peer2Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
+    assert.deepEqual(peer3Pool.getPeerIdentity('2'), {login: 'user-with-token-2-token'})
 
     // Single-part messages
     peer1Pool.send('3', Buffer.from('a'))
@@ -96,15 +87,15 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
 
     // Retain local peer identities after disconnecting
-    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), peer1Identity)
-    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), peer2Identity)
-    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), peer3Identity)
+    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), {login: 'user-with-token-1-token'})
+    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), {login: 'user-with-token-2-token'})
+    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), {login: 'user-with-token-3-token'})
 
     // Retain remote peer identities after disconnecting
-    assert.deepEqual(peer1Pool.getPeerIdentity('3'), peer3Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('1'), peer1Identity)
-    assert.deepEqual(peer2Pool.getPeerIdentity('3'), peer3Identity)
-    assert.deepEqual(peer3Pool.getPeerIdentity('2'), peer2Identity)
+    assert.deepEqual(peer1Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
+    assert.deepEqual(peer3Pool.getPeerIdentity('1'), {login: 'user-with-token-1-token'})
+    assert.deepEqual(peer2Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
+    assert.deepEqual(peer3Pool.getPeerIdentity('2'), {login: 'user-with-token-2-token'})
   })
 
   test('timeouts connecting to the pub-sub service', async () => {
@@ -135,11 +126,6 @@ suite('PeerPool', () => {
   })
 
   test('authentication errors during signaling', async () => {
-    server.identityProvider.setIdentitiesByToken({
-      '1-token': {login: 'peer-1'},
-      '2-token': {login: 'peer-2'},
-    })
-
     const peer1Pool = await buildPeerPool('1', server, {connectionTimeout: 300})
     const peer2Pool = await buildPeerPool('2', server)
 
@@ -169,8 +155,8 @@ suite('PeerPool', () => {
         error = e
       }
       assert(error instanceof Errors.PeerConnectionError)
-      assert.equal(peer2Pool.testErrors.length, 1)
-      assert(peer2Pool.testErrors[0] instanceof Errors.InvalidAuthenticationTokenError)
+      assert(peer2Pool.testErrors.length > 0)
+      assert(peer2Pool.testErrors.every((e) => e instanceof Errors.InvalidAuthenticationTokenError))
     }
 
     // After restoring peer 2's identity, we should be able to connect
@@ -187,15 +173,15 @@ suite('PeerPool', () => {
     const pubSubGateway = {
       subscribe () {
         subscribeRequests.push(arguments)
-        return Promise.resolve()
+        return Promise.resolve({
+          dispose () {}
+        })
       }
     }
 
     const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
     const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
-    peer1Pool.setLocalPeerIdentity('peer-1-token', {login: 'peer-1'})
-    peer2Pool.setLocalPeerIdentity('peer-2-token', {login: 'peer-2'})
 
     let error
     try {
