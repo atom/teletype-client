@@ -604,17 +604,29 @@ suite('Client Integration', () => {
       deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 4))
     ))
 
+    hostBufferProxy.setTextInRange(point(4, 0), point(4, 0), 'X')
+
+    await condition(() => (
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 5)) &&
+      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 5)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 5)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 5))
+    ))
+
     guest1EditorProxy.updateSelections({
       1: {range: range([5, 4], [9, 6]), reversed: true}
     })
     guest2EditorProxy.follow(guest1EditorProxy.siteId)
+
     await condition(() => (
       deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
       deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
+      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
       deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
       deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4))
+      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5))
     ))
 
     // Update active positions after a site disconnects.
