@@ -246,6 +246,29 @@ suite('Client Integration', () => {
       })
       await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 21}))
 
+      // Extend the tether when the follower starts typing.
+      guestEditorProxy.bufferProxy.setTextInRange({row: 21, column: 21}, {row: 21, column: 21}, 'ABCD')
+      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.EXTENDED)
+
+      // Disconnects the tether if leader moves offscreen within the disconnect window.
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      })
+      await condition(() => guestEditorDelegate.getTetherState() === FollowState.DISCONNECTED)
+      assert.deepEqual(
+        guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
+        {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
+      )
+
+      // Can reconnect tether after disconnecting
+      guestEditorProxy.follow(1)
+      assert.equal(guestEditorDelegate.getTetherState(), FollowState.RETRACTED)
+      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      hostEditorProxy.updateSelections({
+        2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
+      })
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 1, column: 1}))
+
       // Disconnects the tether if it moves off screen within the disconnect
       // window of the follower moving their cursor
       guestEditorProxy.updateSelections({
