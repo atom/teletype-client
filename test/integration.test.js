@@ -246,8 +246,12 @@ suite('Client Integration', () => {
       })
       await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 21}))
 
+      // Update delegate's tether position when text changes on remote sites.
+      hostBufferProxy.setTextInRange({row: 21, column: 0}, {row: 21, column: 0}, 'X')
+      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 22}))
+
       // Extend the tether when the follower starts typing.
-      guestEditorProxy.bufferProxy.setTextInRange({row: 21, column: 21}, {row: 21, column: 21}, 'ABCD')
+      guestEditorProxy.bufferProxy.setTextInRange({row: 21, column: 22}, {row: 21, column: 22}, 'ABCD')
       assert.equal(guestEditorProxy.resolveFollowState(), FollowState.EXTENDED)
 
       // Disconnects the tether if leader moves offscreen within the disconnect window.
