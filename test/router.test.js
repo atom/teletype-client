@@ -126,14 +126,3 @@ function recordNotifications (router, channelIds) {
   })
 }
 
-function recordTracks (router, channelIds) {
-  if (!router.testTracks) router.testTracks = {}
-  channelIds.forEach((channelId) => {
-    router.testTracks[channelId] = {}
-    router.onTrack(channelId, ({senderId, metadata, track}) => {
-      router.testTracks[channelId][track.id] = {
-        senderId, metadata: metadata.toString(), track
-      }
-    })
-  })
-}
