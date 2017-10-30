@@ -111,6 +111,42 @@ suite('Router', () => {
       await spoke1Router.request('spoke-2', 'channel-4', 'request from spoke 1 on channel 3')
     }
   })
+
+  test('async notification and request handlers', async () => {
+    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), {isHub: true})
+    const spoke1 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-1', server), {isHub: false})
+    const spoke2 = buildStarNetwork('some-network-id', await buildPeerPool('spoke-2', server), {isHub: false})
+    await spoke1.connectTo('hub')
+    await spoke2.connectTo('hub')
+
+    const spoke1Router = new Router(spoke1)
+    const spoke2Router = new Router(spoke2)
+    const spoke2Inbox = []
+
+    spoke2Router.onNotification('notification-channel-1', async ({message}) => {
+      await timeout(Math.random() * 50)
+      spoke2Inbox.push(message.toString())
+    })
+    spoke2Router.onNotification('notification-channel-2', async ({message}) => {
+      await timeout(Math.random() * 50)
+      spoke2Inbox.push(message.toString())
+    })
+    spoke2Router.onRequest('request-channel-1', async ({request}) => {
+      await timeout(Math.random() * 50)
+      spoke2Inbox.push(request.toString())
+    })
+    spoke2Router.onRequest('request-channel-2', async ({request}) => {
+      await timeout(Math.random() * 50)
+      spoke2Inbox.push(request.toString())
+    })
+
+    spoke1Router.notify('notification-channel-1', '1')
+    spoke1Router.notify('notification-channel-2', '2')
+    spoke1Router.request('spoke-2', 'request-channel-1', '3')
+    spoke1Router.request('spoke-2', 'request-channel-2', '4')
+
+    await condition(() => deepEqual(spoke2Inbox, ['1', '2', '3', '4']))
+  })
 })
 
 function recordNotifications (router, channelIds) {
@@ -126,3 +162,6 @@ function recordNotifications (router, channelIds) {
   })
 }
 
+function timeout (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
