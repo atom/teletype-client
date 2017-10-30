@@ -29,10 +29,29 @@ message EditorProxy {
   uint32 id = 1;
   uint32 buffer_proxy_id = 2;
   map<uint32, uint32> selection_layer_ids_by_site_id = 3;
+  map<uint32, Tether> tethers_by_follower_id = 4;
+
+  message Tether {
+    uint32 leader_site_id = 1;
+    uint32 state = 2;
+  }
 }
 
 message EditorProxyUpdate {
-  map<uint32, uint32> selection_layer_ids_by_site_id = 1;
+  oneof variant {
+    SelectionsUpdate selections_update = 1;
+    TetherUpdate tether_update = 2;
+  }
+
+  message SelectionsUpdate {
+    map<uint32, uint32> selection_layer_ids_by_site_id = 1;
+  }
+
+  message TetherUpdate {
+    uint32 follower_site_id = 1;
+    uint32 leader_site_id = 2;
+    uint32 state = 3;
+  }
 }
 
 message BufferProxy {

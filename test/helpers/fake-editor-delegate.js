@@ -4,6 +4,7 @@ module.exports =
 class Editor {
   constructor () {
     this.selectionsBySiteId = {}
+    this.activePositionsBySiteId = {}
   }
 
   dispose () {
@@ -12,6 +13,27 @@ class Editor {
 
   isDisposed () {
     return this.disposed
+  }
+
+  updateViewport (startRow, endRow) {
+    this.viewport = {startRow, endRow}
+  }
+
+  isPositionVisible ({row}) {
+    if (this.viewport) {
+      const {startRow, endRow} = this.viewport
+      return startRow <= row && row <= endRow
+    } else {
+      return false
+    }
+  }
+
+  activePositionForSiteId (siteId) {
+    return this.activePositionsBySiteId[siteId]
+  }
+
+  updateActivePositions (activePositionsBySiteId) {
+    this.activePositionsBySiteId = activePositionsBySiteId
   }
 
   getSelectionsForSiteId (siteId) {
@@ -40,5 +62,18 @@ class Editor {
 
   clearSelectionsForSiteId (siteId) {
     delete this.selectionsBySiteId[siteId]
+  }
+
+  updateTether (state, position) {
+    this.tetherState = state
+    this.tetherPosition = position
+  }
+
+  getTetherState () {
+    return this.tetherState
+  }
+
+  getTetherPosition () {
+    return this.tetherPosition
   }
 }
