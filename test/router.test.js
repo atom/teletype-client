@@ -111,6 +111,40 @@ suite('Router', () => {
       await spoke1Router.request('spoke-2', 'channel-4', 'request from spoke 1 on channel 3')
     }
   })
+
+  test('async notification and request handlers', async () => {
+    const hub = buildStarNetwork('some-network-id', await buildPeerPool('hub', server), {isHub: true})
+    const spoke = buildStarNetwork('some-network-id', await buildPeerPool('spoke', server), {isHub: false})
+    await spoke.connectTo('hub')
+
+    const hubRouter = new Router(hub)
+    const spokeRouter = new Router(spoke)
+    const spokeInbox = []
+
+    spokeRouter.onNotification('notification-channel-1', async ({message}) => {
+      await timeout(Math.random() * 50)
+      spokeInbox.push(message.toString())
+    })
+    spokeRouter.onNotification('notification-channel-2', async ({message}) => {
+      await timeout(Math.random() * 50)
+      spokeInbox.push(message.toString())
+    })
+    spokeRouter.onRequest('request-channel-1', async ({request}) => {
+      await timeout(Math.random() * 50)
+      spokeInbox.push(request.toString())
+    })
+    spokeRouter.onRequest('request-channel-2', async ({request}) => {
+      await timeout(Math.random() * 50)
+      spokeInbox.push(request.toString())
+    })
+
+    hubRouter.notify('notification-channel-1', '1')
+    hubRouter.notify('notification-channel-2', '2')
+    hubRouter.request('spoke', 'request-channel-1', '3')
+    hubRouter.request('spoke', 'request-channel-2', '4')
+
+    await condition(() => deepEqual(spokeInbox, ['1', '2', '3', '4']))
+  })
 })
 
 function recordNotifications (router, channelIds) {
@@ -126,14 +160,6 @@ function recordNotifications (router, channelIds) {
   })
 }
 
-function recordTracks (router, channelIds) {
-  if (!router.testTracks) router.testTracks = {}
-  channelIds.forEach((channelId) => {
-    router.testTracks[channelId] = {}
-    router.onTrack(channelId, ({senderId, metadata, track}) => {
-      router.testTracks[channelId][track.id] = {
-        senderId, metadata: metadata.toString(), track
-      }
-    })
-  })
+function timeout (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
