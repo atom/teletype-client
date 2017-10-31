@@ -519,6 +519,19 @@ suite('Client Integration', () => {
       guest2EditorDelegate.updateViewport(5, 15)
       guest2EditorProxy.setDelegate(guest2EditorDelegate)
 
+      // Disconnect guest1's tether.
+      guest1EditorProxy.unfollow()
+      guest1EditorProxy.updateSelections({1: {range: range([0, 0], [0, 0])}})
+
+      await condition(() => {
+        const guest1SelectionOnHost = hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
+        const guest1SelectionOnGuest2 = guest2EditorDelegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
+        return (
+          guest1SelectionOnHost && deepEqual(guest1SelectionOnHost.range, range([0, 0], [0, 0])) &&
+          guest1SelectionOnGuest2 && deepEqual(guest1SelectionOnGuest2.range, range([0, 0], [0, 0]))
+        )
+      })
+
       // Form a cycle (guest1 -> guest2 -> host -> guest1) and ensure it gets
       // broken on the site with the lowest site id.
       guest1EditorProxy.follow(guest2Portal.siteId)
