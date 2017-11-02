@@ -544,12 +544,15 @@ suite('Client Integration', () => {
         guest2EditorProxy.resolveLeaderSiteId() === hostPortal.siteId
       ))
 
+      assert.equal(hostEditorProxy.getFollowedSiteId(), null)
       assert.equal(hostEditorDelegate.getTetherState(), FollowState.DISCONNECTED)
       assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
+      assert.equal(guest1EditorProxy.getFollowedSiteId(), guest2Portal.siteId)
       assert.equal(guest1EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
+      assert.equal(guest2EditorProxy.getFollowedSiteId(), hostPortal.siteId)
       assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 5, column: 5})
 
@@ -565,12 +568,15 @@ suite('Client Integration', () => {
         guest2EditorProxy.resolveLeaderSiteId() === guest1Portal.siteId
       ))
 
+      assert.equal(hostEditorProxy.getFollowedSiteId(), guest1Portal.siteId)
       assert.equal(hostEditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 13, column: 13})
 
+      assert.equal(guest1EditorProxy.getFollowedSiteId(), null)
       assert.equal(guest1EditorDelegate.getTetherState(), FollowState.DISCONNECTED)
       assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 13, column: 13})
 
+      assert.equal(guest2EditorProxy.getFollowedSiteId(), hostPortal.siteId)
       assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
       assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13})
     })
