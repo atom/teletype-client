@@ -158,9 +158,10 @@ suite('Portal', () => {
     ))
   })
 
-  function buildPortal (portalId, peerPool, hostPeerId) {
+  async function buildPortal (portalId, peerPool, hostPeerId) {
     const siteId = hostPeerId == null ? 1 : null
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
+    await portal.initialize()
     portal.testDelegate = new FakePortalDelegate()
     portal.setDelegate(portal.testDelegate)
     return portal

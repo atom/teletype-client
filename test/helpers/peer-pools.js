@@ -16,6 +16,7 @@ async function buildPeerPool (peerId, server, options = {}) {
     testEpoch
   })
   await peerPool.initialize()
+  if (options.listen !== false) await peerPool.listen()
 
   peerPool.testDisconnectionEvents = []
   peerPool.onDisconnection(({peerId}) => {
