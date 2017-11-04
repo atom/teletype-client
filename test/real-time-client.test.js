@@ -25,32 +25,6 @@ suite('RealTimeClient', () => {
       }
       assert(error instanceof Errors.ClientOutOfDateError)
     })
-
-    test('throws when retrieving the client id from the pub-sub gateway exceeds the connection timeout', async () => {
-      const stubRestGateway = {
-        get: (url) => {
-          return {ok: false}
-        }
-      }
-      const stubPubSubGateway = {
-        getClientId () {
-          return new Promise(() => {})
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: stubPubSubGateway,
-        restGateway: stubRestGateway,
-        connectionTimeout: 100
-      })
-
-      let error
-      try {
-        await client.initialize()
-      } catch (e) {
-        error = e
-      }
-      assert(error instanceof Errors.PubSubConnectionError)
-    })
   })
 
   suite('signIn(oauthToken)', () => {
@@ -174,9 +148,6 @@ suite('RealTimeClient', () => {
         }
       }
       const stubPubSubGateway = {
-        getClientId () {
-          return Promise.resolve('')
-        },
         subscribe () {
           return Promise.resolve({
             dispose () {}
