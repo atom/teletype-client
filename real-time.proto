@@ -85,6 +85,7 @@ message RouterMessage {
   message Response {
     uint32 request_id = 1;
     bytes body = 2;
+    bool ok = 3;
   }
 }
 

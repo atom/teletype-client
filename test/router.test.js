@@ -71,11 +71,11 @@ suite('Router', () => {
 
     spoke2Router.onRequest('channel-1', ({senderId, requestId, request}) => {
       assert.equal(request.toString(), 'request from spoke 1 on channel 1')
-      spoke2Router.respond(requestId, 'response from spoke 2 on channel 1')
+      spoke2Router.respond(requestId, {body: 'response from spoke 2 on channel 1'})
     })
     spoke2Router.onRequest('channel-2', ({senderId, requestId, request}) => {
       assert.equal(request.toString(), 'request from spoke 1 on channel 2')
-      spoke2Router.respond(requestId, 'response from spoke 2 on channel 2')
+      spoke2Router.respond(requestId, {body: 'response from spoke 2 on channel 2'})
     })
 
     {
@@ -88,6 +88,13 @@ suite('Router', () => {
       const response = await spoke1Router.request('spoke-2', 'channel-2', 'request from spoke 1 on channel 2')
       assert(response.ok)
       assert.equal(response.body.toString(), 'response from spoke 2 on channel 2')
+    }
+
+    // Ensure requests to nonexistent routes receive a failure response.
+    {
+      const response = await spoke1Router.request('spoke-2', 'nonexistent', 'request from spoke 1 on nonexistent channel')
+      assert(!response.ok)
+      assert.equal(response.body.length, 0)
     }
 
     // Ensure requests and responses with no body are allowed
@@ -104,9 +111,9 @@ suite('Router', () => {
     // Ensure that multiple responses are disallowed
     {
       spoke2Router.onRequest('channel-4', ({senderId, requestId, request}) => {
-        spoke2Router.respond(requestId, 'response from spoke 2 on channel 4')
+        spoke2Router.respond(requestId, {body: 'response from spoke 2 on channel 4'})
         assert.throws(
-          () => spoke2Router.respond(requestId, 'duplicate response'),
+          () => spoke2Router.respond(requestId, {body: 'duplicate response'}),
           'Multiple responses to the same request are not allowed'
         )
       })
