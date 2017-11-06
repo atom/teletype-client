@@ -21,8 +21,6 @@
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "electron": "1.6.11",
-    "electron-mocha": "^4.0.0",
-    "mocha": "^3.4.2",
-    "wrtc": "0.0.62"
+    "electron-mocha": "^4.0.0"
   }
 }
