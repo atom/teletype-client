@@ -80,12 +80,14 @@ suite('Router', () => {
 
     {
       const response = await spoke1Router.request('spoke-2', 'channel-1', 'request from spoke 1 on channel 1')
-      assert.equal(response.toString(), 'response from spoke 2 on channel 1')
+      assert(response.ok)
+      assert.equal(response.body.toString(), 'response from spoke 2 on channel 1')
     }
 
     {
       const response = await spoke1Router.request('spoke-2', 'channel-2', 'request from spoke 1 on channel 2')
-      assert.equal(response.toString(), 'response from spoke 2 on channel 2')
+      assert(response.ok)
+      assert.equal(response.body.toString(), 'response from spoke 2 on channel 2')
     }
 
     // Ensure requests and responses with no body are allowed
@@ -95,7 +97,8 @@ suite('Router', () => {
         spoke2Router.respond(requestId)
       })
       const response = await spoke1Router.request('spoke-2', 'channel-3')
-      assert.equal(response.length, 0)
+      assert(response.ok)
+      assert.equal(response.body.length, 0)
     }
 
     // Ensure that multiple responses are disallowed
