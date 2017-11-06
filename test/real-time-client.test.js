@@ -25,40 +25,15 @@ suite('RealTimeClient', () => {
       }
       assert(error instanceof Errors.ClientOutOfDateError)
     })
-
-    test('throws when retrieving the client id from the pub-sub gateway exceeds the connection timeout', async () => {
-      const stubRestGateway = {
-        get: (url) => {
-          return {ok: false}
-        }
-      }
-      const stubPubSubGateway = {
-        getClientId () {
-          return new Promise(() => {})
-        }
-      }
-      const client = new RealTimeClient({
-        pubSubGateway: stubPubSubGateway,
-        restGateway: stubRestGateway,
-        connectionTimeout: 100
-      })
-
-      let error
-      try {
-        await client.initialize()
-      } catch (e) {
-        error = e
-      }
-      assert(error instanceof Errors.PubSubConnectionError)
-    })
   })
 
   suite('signIn(oauthToken)', () => {
     test('throws when the server replies with an unexpected status code', async () => {
+      const stubPubSubGateway = {}
       const stubRestGateway = {
         setOauthToken () {}
       }
-      const client = new RealTimeClient({restGateway: stubRestGateway})
+      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -76,10 +51,11 @@ suite('RealTimeClient', () => {
     })
 
     test('throws when contacting the server fails', async () => {
+      const stubPubSubGateway = {}
       const stubRestGateway = {
         setOauthToken () {}
       }
-      const client = new RealTimeClient({restGateway: stubRestGateway})
+      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -98,8 +74,9 @@ suite('RealTimeClient', () => {
 
   suite('createPortal', () => {
     test('throws if posting the portal to the server fails', async () => {
+      const stubPubSubGateway = {}
       const stubRestGateway = {}
-      const client = new RealTimeClient({restGateway: stubRestGateway})
+      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -131,11 +108,9 @@ suite('RealTimeClient', () => {
 
   suite('joinPortal', () => {
     test('throws if retrieving the portal from the server fails', async () => {
+      const stubPubSubGateway = {}
       const stubRestGateway = {}
-      const client = new RealTimeClient({restGateway: stubRestGateway})
-      client.verifyOauthToken = async function () {
-        return {success: true}
-      }
+      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -174,9 +149,6 @@ suite('RealTimeClient', () => {
         }
       }
       const stubPubSubGateway = {
-        getClientId () {
-          return Promise.resolve('')
-        },
         subscribe () {
           return Promise.resolve({
             dispose () {}

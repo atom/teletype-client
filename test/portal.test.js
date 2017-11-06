@@ -50,9 +50,9 @@ suite('Portal', () => {
     const guest1PeerPool = await buildPeerPool('guest1', server)
     const guest2PeerPool = await buildPeerPool('guest2', server)
 
-    const hostPortal = buildPortal('portal', hostPeerPool)
-    const guest1Portal = buildPortal('portal', guest1PeerPool, 'host')
-    const guest2Portal = buildPortal('portal', guest2PeerPool, 'host')
+    const hostPortal = await buildPortal('portal', hostPeerPool)
+    const guest1Portal = await buildPortal('portal', guest1PeerPool, 'host')
+    const guest2Portal = await buildPortal('portal', guest2PeerPool, 'host')
     await guest1Portal.join()
     await guest2Portal.join()
 
@@ -104,9 +104,9 @@ suite('Portal', () => {
     const guest1PeerPool = await buildPeerPool('guest1', server)
     const guest2PeerPool = await buildPeerPool('guest2', server)
 
-    const hostPortal = buildPortal('portal', hostPeerPool)
-    const guest1Portal = buildPortal('portal', guest1PeerPool, 'host')
-    const guest2Portal = buildPortal('portal', guest2PeerPool, 'host')
+    const hostPortal = await buildPortal('portal', hostPeerPool)
+    const guest1Portal = await buildPortal('portal', guest1PeerPool, 'host')
+    const guest2Portal = await buildPortal('portal', guest2PeerPool, 'host')
     await guest1Portal.join()
     await guest2Portal.join()
 
@@ -127,8 +127,8 @@ suite('Portal', () => {
     const hostPeerPool = await buildPeerPool('host', server)
     const guestPeerPool = await buildPeerPool('guest', server)
 
-    const hostPortal = buildPortal('portal', hostPeerPool)
-    const guestPortal = buildPortal('portal', guestPeerPool, 'host')
+    const hostPortal = await buildPortal('portal', hostPeerPool)
+    const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
     await guestPortal.join()
     assert(guestPortal.testDelegate.getActiveEditorProxy() === null)
     guestPortal.testDelegate.activeEditorProxyChangeCount = 0
@@ -158,9 +158,10 @@ suite('Portal', () => {
     ))
   })
 
-  function buildPortal (portalId, peerPool, hostPeerId) {
+  async function buildPortal (portalId, peerPool, hostPeerId) {
     const siteId = hostPeerId == null ? 1 : null
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
+    await portal.initialize()
     portal.testDelegate = new FakePortalDelegate()
     portal.setDelegate(portal.testDelegate)
     return portal

@@ -7,6 +7,7 @@ const RestGateway = require('../lib/rest-gateway')
 const Errors = require('../lib/errors')
 const PeerPool = require('../lib/peer-pool')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
+const {Disposable} = require('event-kit')
 
 suite('PeerPool', () => {
   let server
@@ -112,10 +113,11 @@ suite('PeerPool', () => {
       }
     }
     const peerPool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
+    await peerPool.initialize()
 
     let error
     try {
-      await peerPool.initialize()
+      await peerPool.listen()
     } catch (e) {
       error = e
     }
@@ -182,6 +184,7 @@ suite('PeerPool', () => {
     const peer1Pool = new PeerPool({peerId: '1', connectionTimeout: 100, restGateway, pubSubGateway})
     const peer2Pool = new PeerPool({peerId: '2', connectionTimeout: 100, restGateway, pubSubGateway})
     await Promise.all([peer1Pool.initialize(), peer2Pool.initialize()])
+    await Promise.all([peer1Pool.listen(), peer2Pool.listen()])
 
     let error
     try {
@@ -247,5 +250,39 @@ suite('PeerPool', () => {
     assert.deepEqual(peer1Pool.testDisconnectionEvents, ['2', '3', '4'])
     assert.deepEqual(peer1Pool.testErrors, [errorEvent1, errorEvent2, errorEvent3])
     assert.notEqual(peer1Pool.getPeerConnection('4'), peer4Connection)
+  })
+
+  test('listening more than once for incoming connections', async () => {
+    const peerPool = await buildPeerPool('1', server, {listen: false})
+    peerPool.pubSubGateway = {
+      subscriptionsCount: 0,
+      subscribe () {
+        this.subscriptionsCount++
+        return new Disposable(() => this.subscriptionsCount--)
+      }
+    }
+
+    // Parallel calls to `listen` will only subscribe once.
+    const [listen1Disposable, listen2Disposable] = await Promise.all([peerPool.listen(), peerPool.listen()])
+    const listen3Disposable = await peerPool.listen()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 1)
+
+    // Dispose subscription when the last listener is disposed.
+    listen1Disposable.dispose()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 1)
+
+    listen2Disposable.dispose()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 1)
+
+    listen3Disposable.dispose()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 0)
+
+    // Ensure PeerPool can listen again.
+    const listen4Disposable = await peerPool.listen()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 1)
+
+    // Ensure disposing the PeerPool also disposes subscriptions.
+    peerPool.dispose()
+    assert.equal(peerPool.pubSubGateway.subscriptionsCount, 0)
   })
 })
