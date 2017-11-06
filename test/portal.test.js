@@ -156,6 +156,26 @@ suite('Portal', () => {
       guestPortal.testDelegate.getActiveBufferProxyURI() === 'buffer-1' &&
       guestPortal.testDelegate.activeEditorProxyChangeCount === 3
     ))
+
+    const hostBufferProxy3 = await hostPortal.createBufferProxy({uri: 'buffer-3', text: ''})
+    const hostEditorProxy3 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy3})
+    hostPortal.setActiveEditorProxy(hostEditorProxy3)
+    hostBufferProxy3.dispose()
+    hostPortal.setActiveEditorProxy(null)
+    await condition(() => (
+      guestPortal.testDelegate.getActiveBufferProxyURI() === null &&
+      guestPortal.testDelegate.activeEditorProxyChangeCount === 4
+    ))
+
+    const hostBufferProxy4 = await hostPortal.createBufferProxy({uri: 'buffer-4', text: ''})
+    const hostEditorProxy4 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy4})
+    hostPortal.setActiveEditorProxy(hostEditorProxy4)
+    hostEditorProxy4.dispose()
+    hostPortal.setActiveEditorProxy(hostEditorProxy1)
+    await condition(() => (
+      guestPortal.testDelegate.getActiveBufferProxyURI() === 'buffer-1' &&
+      guestPortal.testDelegate.activeEditorProxyChangeCount === 5
+    ))
   })
 
   function buildPortal (portalId, peerPool, hostPeerId) {
