@@ -1,7 +1,7 @@
 require('./setup')
 const assert = require('assert')
 const deepEqual = require('deep-equal')
-const {startTestServer} = require('@atom/real-time-server')
+const {startTestServer} = require('@atom/teletype-server')
 const condition = require('./helpers/condition')
 const RestGateway = require('../lib/rest-gateway')
 const Errors = require('../lib/errors')

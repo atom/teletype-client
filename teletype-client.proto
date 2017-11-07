@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "tachyon.proto";
+import "teletype-crdt.proto";
 
 message PortalSubscriptionResponse {
   map<string, uint32> site_ids_by_peer_id = 1;

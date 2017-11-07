@@ -1,6 +1,6 @@
 const assert = require('assert')
 const {Disposable} = require('event-kit')
-const {startTestServer} = require('@atom/real-time-server')
+const {startTestServer} = require('@atom/teletype-server')
 const {buildPeerPool, clearPeerPools} = require('./helpers/peer-pools')
 const condition = require('./helpers/condition')
 const setEqual = require('./helpers/set-equal')

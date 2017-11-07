@@ -1,9 +1,9 @@
 require('./setup')
 const assert = require('assert')
 const Errors = require('../lib/errors')
-const RealTimeClient = require('../lib/real-time-client')
+const TeletypeClient = require('../lib/teletype-client')
 
-suite('RealTimeClient', () => {
+suite('TeletypeClient', () => {
   suite('initialize', () => {
     test('throws when the protocol version is out of date according to the server', async () => {
       const stubRestGateway = {
@@ -12,7 +12,7 @@ suite('RealTimeClient', () => {
           return {ok: true, body: {version: 99999}}
         }
       }
-      const client = new RealTimeClient({
+      const client = new TeletypeClient({
         restGateway: stubRestGateway,
         pubSubGateway: {}
       })
@@ -33,7 +33,7 @@ suite('RealTimeClient', () => {
       const stubRestGateway = {
         setOauthToken () {}
       }
-      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
+      const client = new TeletypeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -55,7 +55,7 @@ suite('RealTimeClient', () => {
       const stubRestGateway = {
         setOauthToken () {}
       }
-      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
+      const client = new TeletypeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -76,7 +76,7 @@ suite('RealTimeClient', () => {
     test('throws if posting the portal to the server fails', async () => {
       const stubPubSubGateway = {}
       const stubRestGateway = {}
-      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
+      const client = new TeletypeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -110,7 +110,7 @@ suite('RealTimeClient', () => {
     test('throws if retrieving the portal from the server fails', async () => {
       const stubPubSubGateway = {}
       const stubRestGateway = {}
-      const client = new RealTimeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
+      const client = new TeletypeClient({restGateway: stubRestGateway, pubSubGateway: stubPubSubGateway})
 
       {
         let error
@@ -156,7 +156,7 @@ suite('RealTimeClient', () => {
         }
       }
       const errorEvents = []
-      const client = new RealTimeClient({
+      const client = new TeletypeClient({
         pubSubGateway: stubPubSubGateway,
         restGateway: stubRestGateway
       })

@@ -6,10 +6,10 @@ const FakeEditorDelegate = require('./helpers/fake-editor-delegate')
 const FakePortalDelegate = require('./helpers/fake-portal-delegate')
 const condition = require('./helpers/condition')
 const timeout = require('./helpers/timeout')
-const {RealTimeClient, FollowState, Errors} = require('..')
+const {TeletypeClient, FollowState, Errors} = require('..')
 const RestGateway = require('../lib/rest-gateway')
 const PusherPubSubGateway = require('../lib/pusher-pub-sub-gateway')
-const {startTestServer} = require('@atom/real-time-server')
+const {startTestServer} = require('@atom/teletype-server')
 
 let testEpoch = 0
 
@@ -985,7 +985,7 @@ suite('Client Integration', () => {
 
   let nextTokenId = 1
   async function buildClient (options={}) {
-    const client = new RealTimeClient({
+    const client = new TeletypeClient({
       restGateway: new RestGateway({baseURL: server.address}),
       pubSubGateway: server.pubSubGateway || new PusherPubSubGateway(server.pusherCredentials),
       didCreateOrJoinPortal: (portal) => portals.push(portal),

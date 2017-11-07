@@ -6,9 +6,9 @@
 ## Setup
 
 ```sh
-git clone https://github.com/atom/real-time-client.git ~/github/real-time-client
-cd ~/github/real-time-client
+git clone https://github.com/atom/teletype-client.git ~/github/teletype-client
+cd ~/github/teletype-client
 cp .env.example .env
-createdb real-time-server-test
+createdb teletype-server-test
 npm install
 ```
