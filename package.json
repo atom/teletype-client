@@ -10,7 +10,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom/teletype-crdt": "^0.8.0",
+    "@atom/teletype-crdt": "^0.8.1",
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.4.0",
     "pusher-js": "^4.1.0",
