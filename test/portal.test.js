@@ -110,17 +110,17 @@ suite('Portal', () => {
     await guest1Portal.join()
     await guest2Portal.join()
 
-    assert.deepEqual(hostPortal.getSiteIdentity(1), hostIdentity)
-    assert.deepEqual(hostPortal.getSiteIdentity(2), guest1Identity)
-    assert.deepEqual(hostPortal.getSiteIdentity(3), guest2Identity)
+    assert.equal(hostPortal.getSiteIdentity(1).login, hostIdentity.login)
+    assert.equal(hostPortal.getSiteIdentity(2).login, guest1Identity.login)
+    assert.equal(hostPortal.getSiteIdentity(3).login, guest2Identity.login)
 
-    assert.deepEqual(guest1Portal.getSiteIdentity(1), hostIdentity)
-    assert.deepEqual(guest1Portal.getSiteIdentity(2), guest1Identity)
-    assert.deepEqual(guest1Portal.getSiteIdentity(3), guest2Identity)
+    assert.equal(guest1Portal.getSiteIdentity(1).login, hostIdentity.login)
+    assert.equal(guest1Portal.getSiteIdentity(2).login, guest1Identity.login)
+    assert.equal(guest1Portal.getSiteIdentity(3).login, guest2Identity.login)
 
-    assert.deepEqual(guest2Portal.getSiteIdentity(1), hostIdentity)
-    assert.deepEqual(guest2Portal.getSiteIdentity(2), guest1Identity)
-    assert.deepEqual(guest2Portal.getSiteIdentity(3), guest2Identity)
+    assert.equal(guest2Portal.getSiteIdentity(1).login, hostIdentity.login)
+    assert.equal(guest2Portal.getSiteIdentity(2).login, guest1Identity.login)
+    assert.equal(guest2Portal.getSiteIdentity(3).login, guest2Identity.login)
   })
 
   test('changing active editor proxy', async () => {

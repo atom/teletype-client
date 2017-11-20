@@ -34,9 +34,9 @@ suite('PeerPool', () => {
     const peer3Pool = await buildPeerPool('3', server)
 
     // Local peer identities
-    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), {login: 'user-with-token-1-token'})
-    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), {login: 'user-with-token-2-token'})
-    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), {login: 'user-with-token-3-token'})
+    assert.equal(peer1Pool.getLocalPeerIdentity().login, 'user-with-token-1-token')
+    assert.equal(peer2Pool.getLocalPeerIdentity().login, 'user-with-token-2-token')
+    assert.equal(peer3Pool.getLocalPeerIdentity().login, 'user-with-token-3-token')
 
     // Connection
     await peer1Pool.connectTo('3')
@@ -48,10 +48,10 @@ suite('PeerPool', () => {
     await peer3Pool.getConnectedPromise('2')
 
     // Remote peer identities
-    assert.deepEqual(peer1Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
-    assert.deepEqual(peer3Pool.getPeerIdentity('1'), {login: 'user-with-token-1-token'})
-    assert.deepEqual(peer2Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
-    assert.deepEqual(peer3Pool.getPeerIdentity('2'), {login: 'user-with-token-2-token'})
+    assert.equal(peer1Pool.getPeerIdentity('3').login, 'user-with-token-3-token')
+    assert.equal(peer3Pool.getPeerIdentity('1').login, 'user-with-token-1-token')
+    assert.equal(peer2Pool.getPeerIdentity('3').login, 'user-with-token-3-token')
+    assert.equal(peer3Pool.getPeerIdentity('2').login, 'user-with-token-2-token')
 
     // Single-part messages
     peer1Pool.send('3', Buffer.from('a'))
@@ -88,15 +88,15 @@ suite('PeerPool', () => {
     assert.deepEqual(peer3Pool.testDisconnectionEvents, ['2', '1'])
 
     // Retain local peer identities after disconnecting
-    assert.deepEqual(peer1Pool.getLocalPeerIdentity(), {login: 'user-with-token-1-token'})
-    assert.deepEqual(peer2Pool.getLocalPeerIdentity(), {login: 'user-with-token-2-token'})
-    assert.deepEqual(peer3Pool.getLocalPeerIdentity(), {login: 'user-with-token-3-token'})
+    assert.equal(peer1Pool.getLocalPeerIdentity().login, 'user-with-token-1-token')
+    assert.equal(peer2Pool.getLocalPeerIdentity().login, 'user-with-token-2-token')
+    assert.equal(peer3Pool.getLocalPeerIdentity().login, 'user-with-token-3-token')
 
     // Retain remote peer identities after disconnecting
-    assert.deepEqual(peer1Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
-    assert.deepEqual(peer3Pool.getPeerIdentity('1'), {login: 'user-with-token-1-token'})
-    assert.deepEqual(peer2Pool.getPeerIdentity('3'), {login: 'user-with-token-3-token'})
-    assert.deepEqual(peer3Pool.getPeerIdentity('2'), {login: 'user-with-token-2-token'})
+    assert.equal(peer1Pool.getPeerIdentity('3').login, 'user-with-token-3-token')
+    assert.equal(peer3Pool.getPeerIdentity('1').login, 'user-with-token-1-token')
+    assert.equal(peer2Pool.getPeerIdentity('3').login, 'user-with-token-3-token')
+    assert.equal(peer3Pool.getPeerIdentity('2').login, 'user-with-token-2-token')
   })
 
   test('timeouts connecting to the pub-sub service', async () => {

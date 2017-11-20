@@ -249,17 +249,17 @@ suite('StarOverlayNetwork', () => {
         setEqual(spoke2.getMemberIds(), ['hub', 'spoke-1', 'spoke-2'])
       ))
 
-      assert.deepEqual(hub.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(hub.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(hub.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(hub.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(hub.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(hub.getMemberIdentity('spoke-2').login, spoke2Identity.login)
 
-      assert.deepEqual(spoke1.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(spoke1.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(spoke1.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(spoke1.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(spoke1.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(spoke1.getMemberIdentity('spoke-2').login, spoke2Identity.login)
 
-      assert.deepEqual(spoke2.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(spoke2.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(spoke2.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(spoke2.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(spoke2.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(spoke2.getMemberIdentity('spoke-2').login, spoke2Identity.login)
 
       // Ensure peer identities can be retrieved on all spokes after disconnection.
       spoke1.disconnect()
@@ -269,17 +269,17 @@ suite('StarOverlayNetwork', () => {
         setEqual(spoke2.getMemberIds(), ['hub', 'spoke-2'])
       ))
 
-      assert.deepEqual(hub.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(hub.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(hub.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(hub.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(hub.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(hub.getMemberIdentity('spoke-2').login, spoke2Identity.login)
 
-      assert.deepEqual(spoke1.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(spoke1.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(spoke1.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(spoke1.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(spoke1.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(spoke1.getMemberIdentity('spoke-2').login, spoke2Identity.login)
 
-      assert.deepEqual(spoke2.getMemberIdentity('hub'), hubIdentity)
-      assert.deepEqual(spoke2.getMemberIdentity('spoke-1'), spoke1Identity)
-      assert.deepEqual(spoke2.getMemberIdentity('spoke-2'), spoke2Identity)
+      assert.equal(spoke2.getMemberIdentity('hub').login, hubIdentity.login)
+      assert.equal(spoke2.getMemberIdentity('spoke-1').login, spoke1Identity.login)
+      assert.equal(spoke2.getMemberIdentity('spoke-2').login, spoke2Identity.login)
     })
   })
 
