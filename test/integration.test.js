@@ -923,7 +923,7 @@ suite('Client Integration', () => {
 
       assert(await client.signIn('token-1'))
       assert(client.isSignedIn())
-      assert.deepEqual(client.getLocalUserIdentity(), {login: 'user-1'})
+      assert.equal(client.getLocalUserIdentity().login, 'user-1')
       assert.equal(client.testSignInChangeEvents.length, 1)
       assert(!client.peerPool.disposed)
 
@@ -936,7 +936,7 @@ suite('Client Integration', () => {
 
       assert(await client.signIn('token-2'))
       assert(client.isSignedIn())
-      assert.deepEqual(client.getLocalUserIdentity(), {login: 'user-2'})
+      assert.equal(client.getLocalUserIdentity().login, 'user-2')
       assert.equal(client.testSignInChangeEvents.length, 3)
       assert(!client.peerPool.disposed)
     })
