@@ -161,12 +161,15 @@ suite('Portal', () => {
     }
 
     {
+      assert.equal(guestPortal.testDelegate.getActiveBufferProxyURI(), 'original-uri')
       guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+
       // Ignore editor proxy switch for an already disposed buffer proxy.
       const newBufferProxy = await hostPortal.createBufferProxy({uri: 'new-uri', text: ''})
       const newEditorProxy = await hostPortal.createEditorProxy({bufferProxy: newBufferProxy})
       hostPortal.setActiveEditorProxy(newEditorProxy)
       newBufferProxy.dispose()
+      hostPortal.setActiveEditorProxy(originalEditorProxy)
       hostPortal.setActiveEditorProxy(null)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === null &&
@@ -175,12 +178,15 @@ suite('Portal', () => {
     }
 
     {
+      assert.equal(guestPortal.testDelegate.getActiveBufferProxyURI(), null)
       guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+
       // Ignore editor proxy switch for an already disposed editor proxy.
       const newBufferProxy = await hostPortal.createBufferProxy({uri: 'new-uri', text: ''})
       const newEditorProxy = await hostPortal.createEditorProxy({bufferProxy: newBufferProxy})
       hostPortal.setActiveEditorProxy(newEditorProxy)
       newEditorProxy.dispose()
+      hostPortal.setActiveEditorProxy(null)
       hostPortal.setActiveEditorProxy(originalEditorProxy)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === 'original-uri' &&
