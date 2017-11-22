@@ -5,6 +5,7 @@ class FakePortalDelegate {
     this.hostLostConnection = false
     this.joinEvents = []
     this.leaveEvents = []
+    this.editorProxies = new Set()
     this.activeEditorProxyChangeCount = 0
   }
 
@@ -32,17 +33,30 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  setActiveEditorProxy (editorProxy) {
-    this.editorProxy = editorProxy
+  activateEditorProxy (editorProxy) {
+    this.editorProxies.add(editorProxy)
+    this.activeEditorProxy = editorProxy
     this.activeEditorProxyChangeCount++
   }
 
+  removeEditorProxy (editorProxy) {
+    this.editorProxies.delete(editorProxy)
+    if (this.activeEditorProxy === editorProxy) {
+      this.activeEditorProxy = null
+      this.activeEditorProxyChangeCount++
+    }
+  }
+
   getActiveEditorProxy () {
-    return this.editorProxy
+    return this.activeEditorProxy
   }
 
   getActiveBufferProxyURI () {
-    return (this.editorProxy) ? this.editorProxy.bufferProxy.uri : null
+    return (this.activeEditorProxy) ? this.activeEditorProxy.bufferProxy.uri : null
+  }
+
+  getEditorProxies () {
+    return Array.from(this.editorProxies)
   }
 
   siteDidJoin (siteId) {

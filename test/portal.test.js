@@ -133,12 +133,12 @@ suite('Portal', () => {
       guestPortal.testDelegate.activeEditorProxyChangeCount = 0
 
       // Don't notify guests when setting the active editor proxy to the same value it currently has.
-      hostPortal.setActiveEditorProxy(hostPortal.testDelegate.getActiveEditorProxy())
+      hostPortal.activateEditorProxy(hostPortal.testDelegate.getActiveEditorProxy())
 
       // Set the active editor proxy to a different value to ensure guests are notified only of this change.
       const originalBufferProxy = await hostPortal.createBufferProxy({uri: 'original-uri', text: ''})
       const originalEditorProxy = await hostPortal.createEditorProxy({bufferProxy: originalBufferProxy})
-      hostPortal.setActiveEditorProxy(originalEditorProxy)
+      hostPortal.activateEditorProxy(originalEditorProxy)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === 'original-uri' &&
         guestPortal.testDelegate.activeEditorProxyChangeCount === 1
@@ -158,8 +158,8 @@ suite('Portal', () => {
       // to switch to a previous value of active editor proxy.
       const newBufferProxy = await hostPortal.createBufferProxy({uri: 'new-uri', text: ''})
       const newEditorProxy = await hostPortal.createEditorProxy({bufferProxy: newBufferProxy})
-      hostPortal.setActiveEditorProxy(newEditorProxy)
-      hostPortal.setActiveEditorProxy(null)
+      hostPortal.activateEditorProxy(newEditorProxy)
+      hostPortal.activateEditorProxy(null)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === null &&
         guestPortal.testDelegate.activeEditorProxyChangeCount === 2
@@ -179,10 +179,10 @@ suite('Portal', () => {
       const bufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const editorProxy2 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy2})
 
-      hostPortal.setActiveEditorProxy(editorProxy1)
+      hostPortal.activateEditorProxy(editorProxy1)
       bufferProxy1.dispose()
-      hostPortal.setActiveEditorProxy(null)
-      hostPortal.setActiveEditorProxy(editorProxy2)
+      hostPortal.activateEditorProxy(null)
+      hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
         guestPortal.testDelegate.activeEditorProxyChangeCount === 1
@@ -202,10 +202,10 @@ suite('Portal', () => {
       const bufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const editorProxy2 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy2})
 
-      hostPortal.setActiveEditorProxy(editorProxy1)
+      hostPortal.activateEditorProxy(editorProxy1)
       editorProxy1.dispose()
-      hostPortal.setActiveEditorProxy(null)
-      hostPortal.setActiveEditorProxy(editorProxy2)
+      hostPortal.activateEditorProxy(null)
+      hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
         guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
         guestPortal.testDelegate.activeEditorProxyChangeCount === 1
