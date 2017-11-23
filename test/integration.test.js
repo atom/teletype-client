@@ -669,31 +669,6 @@ suite('Client Integration', () => {
     ))
   })
 
-  test('closing a portal\'s active editor proxy', async () => {
-    const host = await buildClient()
-    const guest = await buildClient()
-
-    const hostPortal = await host.createPortal()
-    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
-    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
-
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
-    assert(guestPortalDelegate.getActiveEditorProxy() === null)
-
-    hostPortal.activateEditorProxy(hostEditorProxy)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
-
-    hostPortal.activateEditorProxy(null)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() == null)
-
-    hostPortal.activateEditorProxy(hostEditorProxy)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
-  })
-
   test('disposing editor and buffer proxies', async () => {
     const host = await buildClient()
     const guest = await buildClient()
