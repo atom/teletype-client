@@ -33,7 +33,7 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  activateEditorProxy (editorProxy) {
+  async activateEditorProxy (editorProxy) {
     this.editorProxies.add(editorProxy)
     this.activeEditorProxy = editorProxy
     this.activeEditorProxyChangeCount++

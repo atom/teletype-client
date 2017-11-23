@@ -218,7 +218,7 @@ suite('Portal', () => {
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
     await portal.initialize()
     portal.testDelegate = new FakePortalDelegate()
-    portal.setDelegate(portal.testDelegate)
+    await portal.setDelegate(portal.testDelegate)
     return portal
   }
 })
