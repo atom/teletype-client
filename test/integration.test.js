@@ -342,7 +342,7 @@ suite('Client Integration', () => {
       guestEditorProxy.setDelegate(guestEditorDelegate)
       guestEditorProxy.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
-      }, true)
+      }, {initialUpdate: true})
 
       assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 6, column: 6})
 
