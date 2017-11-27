@@ -8,6 +8,7 @@ class FakePortalDelegate {
     this.editorProxies = new Set()
     this.activeEditorProxyChangeCount = 0
     this.tetherPosition = null
+    this.activePositionsBySiteId = {}
   }
 
   dispose () {
@@ -71,6 +72,14 @@ class FakePortalDelegate {
 
   getTetherPosition () {
     return this.tetherPosition
+  }
+
+  activePositionForSiteId (siteId) {
+    return this.activePositionsBySiteId[siteId]
+  }
+
+  updateActivePositions (activePositionsBySiteId) {
+    this.activePositionsBySiteId = activePositionsBySiteId
   }
 
   siteDidJoin (siteId) {
