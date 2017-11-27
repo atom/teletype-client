@@ -63,17 +63,4 @@ class Editor {
   clearSelectionsForSiteId (siteId) {
     delete this.selectionsBySiteId[siteId]
   }
-
-  updateTether (state, position) {
-    this.tetherState = state
-    this.tetherPosition = position
-  }
-
-  getTetherState () {
-    return this.tetherState
-  }
-
-  getTetherPosition () {
-    return this.tetherPosition
-  }
 }
