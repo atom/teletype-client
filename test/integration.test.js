@@ -152,42 +152,87 @@ suite('Client Integration', () => {
     })
   })
 
-  test('switching a portal\'s active editor proxy', async () => {
-    const host = await buildClient()
-    const guest = await buildClient()
-
-    const hostPortal = await host.createPortal()
-    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
-    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
-    hostPortal.activateEditorProxy(hostEditorProxy1)
-
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    await guestPortal.setDelegate(guestPortalDelegate)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
-    const guestEditorProxy1 = guestPortalDelegate.getActiveEditorProxy()
-    assert.deepEqual(guestPortalDelegate.getEditorProxies(), [guestEditorProxy1])
-
-    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
-    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {}})
-    hostPortal.activateEditorProxy(hostEditorProxy2)
-    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-b')
-    const guestEditorProxy2 = guestPortalDelegate.getActiveEditorProxy()
-    assert.deepEqual(guestPortalDelegate.getEditorProxies(), [guestEditorProxy1, guestEditorProxy2])
-
-    hostPortal.activateEditorProxy(hostEditorProxy1)
-    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-a')
-    assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorProxy1)
-    assert.deepEqual(guestPortalDelegate.getEditorProxies(), [guestEditorProxy1, guestEditorProxy2])
-
-    hostPortal.removeEditorProxy(hostEditorProxy2)
-    await condition(() => deepEqual(guestPortalDelegate.getEditorProxies(), [guestEditorProxy1]))
-
-    hostPortal.removeEditorProxy(hostEditorProxy1)
-    await condition(() => deepEqual(guestPortalDelegate.getEditorProxies(), []))
-  })
-
   suite('tethering to other participants', () => {
+    test('following leaders when they change their active editor proxy', async () => {
+      const host = await buildClient()
+      const guest1 = await buildClient()
+      const guest2 = await buildClient()
+
+      const hostPortal = await host.createPortal()
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      // When joining, guests automatically follow the host.
+      const guest1PortalDelegate = new FakePortalDelegate()
+      const guest1Portal = await guest1.joinPortal(hostPortal.id)
+
+      await guest1Portal.setDelegate(guest1PortalDelegate)
+      assert.equal(guest1PortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
+      assert.equal(guest1PortalDelegate.getEditorProxies().length, 1)
+
+      const guest2PortalDelegate = new FakePortalDelegate()
+      const guest2Portal = await guest2.joinPortal(hostPortal.id)
+
+      await guest2Portal.setDelegate(guest2PortalDelegate)
+      assert.equal(guest2PortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
+      assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
+
+      // Activating proxies on the leader automatically activates them on followers too.
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {}})
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+
+      await condition(() => (
+        guest1PortalDelegate.getActiveBufferProxyURI() === 'buffer-b' &&
+        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-b'
+      ))
+
+      assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
+      assert.equal(guest2PortalDelegate.getEditorProxies().length, 2)
+
+      // Host can activate previously activated proxies.
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      await condition(() => (
+        guest1PortalDelegate.getActiveBufferProxyURI() === 'buffer-a' &&
+        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-a'
+      ))
+
+      assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
+      assert.equal(guest2PortalDelegate.getEditorProxies().length, 2)
+
+      // Followers disconnect their tether if they activate a different editor proxy than the leader.
+      const hostBufferProxy3 = await hostPortal.createBufferProxy({uri: 'buffer-c', text: ''})
+      const hostEditorProxy3 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy3, selections: {}})
+      hostPortal.activateEditorProxy(hostEditorProxy3)
+      guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-b'))
+
+      guest1PortalDelegate.activeEditorProxyChangeCount = 0
+      guest2PortalDelegate.activeEditorProxyChangeCount = 0
+      await condition(() => (
+        guest1PortalDelegate.getEditorProxies().length === 3 &&
+        guest2PortalDelegate.getEditorProxies().length === 3
+      ))
+
+      assert.equal(guest1PortalDelegate.activeEditorProxyChangeCount, 0)
+      assert.equal(guest2PortalDelegate.activeEditorProxyChangeCount, 1)
+      assert.equal(guest2PortalDelegate.getActiveBufferProxyURI(), 'buffer-c')
+
+      // Removing previously activated proxies from the host portal deletes them from all the guest portals too.
+      hostPortal.removeEditorProxy(hostEditorProxy2)
+      await condition(() => (
+        guest1PortalDelegate.getEditorProxies().length === 2 &&
+        guest2PortalDelegate.getEditorProxies().length === 2
+      ))
+
+      hostPortal.removeEditorProxy(hostEditorProxy1)
+      await condition(() => (
+        guest1PortalDelegate.getEditorProxies().length === 1 &&
+        guest2PortalDelegate.getEditorProxies().length === 1
+      ))
+    })
+
     test('extending, retracting, and disconnecting', async () => {
       const host = await buildClient()
       const guest = await buildClient()

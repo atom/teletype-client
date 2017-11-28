@@ -1,3 +1,5 @@
+const assert = require('assert')
+
 module.exports =
 class FakePortalDelegate {
   constructor () {
@@ -35,18 +37,28 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  async activateEditorProxy (editorProxy) {
+  addEditorProxy (editorProxy) {
+    assert(!this.editorProxies.has(editorProxy))
     this.editorProxies.add(editorProxy)
-    this.activeEditorProxy = editorProxy
-    this.activeEditorProxyChangeCount++
   }
 
   removeEditorProxy (editorProxy) {
+    assert(this.editorProxies.has(editorProxy))
     this.editorProxies.delete(editorProxy)
     if (this.activeEditorProxy === editorProxy) {
       this.activeEditorProxy = null
       this.activeEditorProxyChangeCount++
     }
+  }
+
+  async activateEditorProxy (editorProxy) {
+    assert(editorProxy == null || this.editorProxies.has(editorProxy))
+    this.activeEditorProxy = editorProxy
+    this.activeEditorProxyChangeCount++
+  }
+
+  editorProxyForURI (uri) {
+    return Array.from(this.editorProxies).find((e) => e.bufferProxy.uri === uri)
   }
 
   getActiveEditorProxy () {
