@@ -38,12 +38,12 @@ class FakePortalDelegate {
   }
 
   addEditorProxy (editorProxy) {
-    assert(!this.editorProxies.has(editorProxy))
+    assert(!this.editorProxies.has(editorProxy), 'Cannot add the same editor proxy multiple times')
     this.editorProxies.add(editorProxy)
   }
 
   removeEditorProxy (editorProxy) {
-    assert(this.editorProxies.has(editorProxy))
+    assert(this.editorProxies.has(editorProxy), 'Can only remove editor proxies that had previously been added')
     this.editorProxies.delete(editorProxy)
     if (this.activeEditorProxy === editorProxy) {
       this.activeEditorProxy = null
@@ -52,7 +52,6 @@ class FakePortalDelegate {
   }
 
   async activateEditorProxy (editorProxy) {
-    assert(editorProxy == null || this.editorProxies.has(editorProxy))
     this.activeEditorProxy = editorProxy
     this.activeEditorProxyChangeCount++
   }

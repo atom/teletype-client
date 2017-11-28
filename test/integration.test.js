@@ -159,6 +159,9 @@ suite('Client Integration', () => {
       const guest2 = await buildClient()
 
       const hostPortal = await host.createPortal()
+      const hostPortalDelegate = new FakePortalDelegate()
+      hostPortal.setDelegate(hostPortalDelegate)
+
       const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
       const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
       hostPortal.activateEditorProxy(hostEditorProxy1)
@@ -219,6 +222,22 @@ suite('Client Integration', () => {
       assert.equal(guest2PortalDelegate.activeEditorProxyChangeCount, 1)
       assert.equal(guest2PortalDelegate.getActiveBufferProxyURI(), 'buffer-c')
 
+      // Any participant can follow other guests.
+      hostPortal.follow(guest1Portal.siteId)
+      guest2Portal.follow(guest1Portal.siteId)
+
+      await condition(() => (
+        hostPortalDelegate.getActiveBufferProxyURI() === 'buffer-b' &&
+        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-b'
+      ))
+
+      guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-a'))
+
+      await condition(() => (
+        hostPortalDelegate.getActiveBufferProxyURI() === 'buffer-a' &&
+        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-a'
+      ))
+
       // Removing previously activated proxies from the host portal deletes them from all the guest portals too.
       hostPortal.removeEditorProxy(hostEditorProxy2)
       await condition(() => (
@@ -265,6 +284,7 @@ suite('Client Integration', () => {
         2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
       })
       await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 10, column: 10}))
+      return
 
       // Extend the tether when the guest explicitly moves their cursor
       guestEditorProxy.updateSelections({
