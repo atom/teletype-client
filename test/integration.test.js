@@ -453,71 +453,71 @@ suite('Client Integration', () => {
       const guest2 = await buildClient()
 
       const hostPortal = await host.createPortal()
-      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
-      const hostEditorProxy = await hostPortal.createEditorProxy({
-        bufferProxy: hostBufferProxy,
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({
+        bufferProxy: hostBufferProxy1,
         selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
       })
-      const hostEditorDelegate = new FakeEditorDelegate()
-      hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.activateEditorProxy(hostEditorProxy)
+      const hostEditor1Delegate = new FakeEditorDelegate()
+      hostEditorProxy1.setDelegate(hostEditor1Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
 
       const guest1PortalDelegate = new FakePortalDelegate()
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
       await guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
-      const guest1EditorDelegate = new FakeEditorDelegate()
-      guest1EditorDelegate.updateViewport(5, 15)
-      guest1EditorProxy.setDelegate(guest1EditorDelegate)
+      const guest1Editor1Proxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1Editor1Delegate = new FakeEditorDelegate()
+      guest1Editor1Delegate.updateViewport(5, 15)
+      guest1Editor1Proxy.setDelegate(guest1Editor1Delegate)
 
       const guest2PortalDelegate = new FakePortalDelegate()
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
       await guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
-      const guest2EditorDelegate = new FakeEditorDelegate()
-      guest2EditorDelegate.updateViewport(5, 15)
-      guest2EditorProxy.setDelegate(guest2EditorDelegate)
+      const guest2Editor1Proxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2Editor1Delegate = new FakeEditorDelegate()
+      guest2Editor1Delegate.updateViewport(5, 15)
+      guest2Editor1Proxy.setDelegate(guest2Editor1Delegate)
 
       // Guest1 follows the host, and Guest2 follows Guest1. This has the effect
       // of making Guest2 follow the host.
       guest1Portal.follow(hostPortal.siteId)
       guest2Portal.follow(guest1Portal.siteId)
-      hostEditorProxy.updateSelections({
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
       await condition(() => (
         deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 12, column: 12}) &&
         deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 12, column: 12}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
       ))
 
       // When tether is extended on Guest1, Guest2 momentarily stops following the host.
-      guest1EditorProxy.updateSelections({
+      guest1Editor1Proxy.updateSelections({
         1: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return (
           selection && deepEqual(selection.range, {start: {row: 1, column: 1}, end: {row: 1, column: 1}}) &&
           deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 1, column: 1}) &&
-          deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+          deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
         )
       })
 
       // When tether is retracted on Guest1, Guest2 goes back to following the host.
       await timeout(guest1Portal.tetherDisconnectWindow)
-      guest1EditorDelegate.updateViewport(0, 6)
-      hostEditorProxy.updateSelections({
+      guest1Editor1Delegate.updateViewport(0, 6)
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 8, column: 0}, end: {row: 8, column: 0}}}
       })
       await condition(() => (
         deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
         deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
       ))
 
       // Ensure transitive following works for new sites that join after
@@ -537,25 +537,48 @@ suite('Client Integration', () => {
         deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
         deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
         deepEqual(guest3PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId), {})
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest3Portal.siteId), {})
+      ))
+
+      // Ensure transitive following works when activating other editor proxies.
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({
+        bufferProxy: hostBufferProxy2,
+        selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
+      })
+      const hostEditor2Delegate = new FakeEditorDelegate()
+      hostEditorProxy2.setDelegate(hostEditor2Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+
+      await condition(() => (
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest3PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest3Portal.siteId), {})
       ))
 
       // Disconnecting the tether on Guest1 breaks transitivity.
-      guest1EditorDelegate.updateViewport(6, 15)
-      guest1EditorProxy.updateSelections({
+      const guest1Editor2Proxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1Editor2Delegate = new FakeEditorDelegate()
+      guest1Editor2Delegate.updateViewport(6, 15)
+      guest1Editor2Proxy.setDelegate(guest1Editor2Delegate)
+
+      guest1Editor2Proxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      hostEditorProxy.updateSelections({
+      hostEditorProxy2.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
+        const selection = hostEditor2Delegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
         return (
           selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}}) &&
           deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
-          deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+          deepEqual(hostEditor2Delegate.getSelectionsForSiteId(3), {})
         )
       })
     })
