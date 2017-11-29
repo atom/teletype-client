@@ -284,7 +284,6 @@ suite('Client Integration', () => {
         2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
       })
       await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 10, column: 10}))
-      return
 
       // Extend the tether when the guest explicitly moves their cursor
       guestEditorProxy.updateSelections({
