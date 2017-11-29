@@ -293,6 +293,17 @@ suite('Client Integration', () => {
         guestPortal.resolveFollowState() === FollowState.DISCONNECTED &&
         guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
       ))
+
+      // Can reconnect tether after disconnecting.
+      guestPortal.follow(hostPortal.siteId)
+      await condition(() => (
+        guestPortal.resolveFollowState() === FollowState.RETRACTED &&
+        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-1'
+      ))
+      hostEditorProxy1.updateSelections({
+        2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
+      })
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 1, column: 1}))
     })
 
     test('extending, retracting, and disconnecting when collaborating in a single editor', async () => {
