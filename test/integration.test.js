@@ -713,9 +713,12 @@ suite('Client Integration', () => {
     const guest1 = await buildClient()
     const guest2 = await buildClient()
 
+    const portals = []
+
     const hostPortal = await host.createPortal()
     const hostPortalDelegate = new FakePortalDelegate()
     hostPortal.setDelegate(hostPortalDelegate)
+    portals.push(hostPortal)
 
     const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-uri', text: ('x'.repeat(30) + '\n').repeat(30)})
     const hostEditorProxy = await hostPortal.createEditorProxy({
@@ -729,6 +732,7 @@ suite('Client Integration', () => {
     const guest1PortalDelegate = new FakePortalDelegate()
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
     await guest1Portal.setDelegate(guest1PortalDelegate)
+    portals.push(guest1Portal)
 
     const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
     const guest1EditorDelegate = new FakeEditorDelegate()
@@ -737,56 +741,59 @@ suite('Client Integration', () => {
     const guest2PortalDelegate = new FakePortalDelegate()
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
     await guest2Portal.setDelegate(guest2PortalDelegate)
+    portals.push(guest2Portal)
 
     const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
     const guest2EditorDelegate = new FakeEditorDelegate()
     guest2EditorProxy.setDelegate(guest2EditorDelegate)
 
+    // Update active positions after the leader updates its selections.
     hostEditorProxy.updateSelections({
       1: {range: range([5, 4], [9, 6])},
       2: {range: range([2, 7], [4, 4])}
     })
 
-    await condition(() => (
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(4, 4)) &&
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(4, 4)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 4)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(4, 4)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 4)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(4, 4))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 4)},
+      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(4, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(4, 4)}
+    ])
 
+    // Update active positions after a text change.
     hostBufferProxy.setTextInRange(point(4, 0), point(4, 0), 'X')
 
-    await condition(() => (
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(4, 5)) &&
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(4, 5)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 5)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(4, 5)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 5)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(4, 5))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
+      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(4, 5)}
+    ])
 
+    // Update active positions after the leader changes.
     guest1EditorProxy.updateSelections({
       1: {range: range([5, 4], [9, 6]), reversed: true}
     })
     guest2Portal.follow(guest1Portal.siteId)
 
-    await condition(() => (
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(5, 4)) &&
-      deepEqual(hostPortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(5, 4)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 5)) &&
-      deepEqual(guest1PortalDelegate.activePositionForSiteId(guest2Portal.siteId), point(5, 4)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(guest1Portal.siteId), point(5, 4)) &&
-      deepEqual(guest2PortalDelegate.activePositionForSiteId(hostPortal.siteId), point(4, 5))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(5, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(5, 4)}
+    ])
 
     // Update active positions after a site disconnects.
     guest2Portal.dispose()
-    await condition(() => (
-      !hostPortalDelegate.activePositionForSiteId(guest2Portal.siteId) &&
-      !guest1PortalDelegate.activePositionForSiteId(guest2Portal.siteId)
-    ))
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(5, 4)}
+    ])
+
+    function assertActivePositions (expectedPositions) {
+      const alivePortals = portals.filter((p) => !p.disposed)
+      return condition(() =>
+        alivePortals.every((p) => deepEqual(p.delegate.getActivePositions(), expectedPositions))
+      )
+    }
   })
 
   test('disposing editor and buffer proxies', async () => {

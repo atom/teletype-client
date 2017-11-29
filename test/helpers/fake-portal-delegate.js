@@ -84,12 +84,15 @@ class FakePortalDelegate {
     return this.tetherPosition
   }
 
-  activePositionForSiteId (siteId) {
-    return this.activePositionsBySiteId[siteId]
-  }
-
   updateActivePositions (activePositionsBySiteId) {
     this.activePositionsBySiteId = activePositionsBySiteId
+  }
+
+  getActivePositions () {
+    return Object.keys(this.activePositionsBySiteId).map((siteId) => {
+      const {editorProxy, position} = this.activePositionsBySiteId[siteId]
+      return {siteId, editorProxyId: editorProxy.id, position}
+    })
   }
 
   siteDidJoin (siteId) {
