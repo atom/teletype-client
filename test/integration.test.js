@@ -252,7 +252,50 @@ suite('Client Integration', () => {
       ))
     })
 
-    test('extending, retracting, and disconnecting', async () => {
+    test('extending, retracting, and disconnecting when collaborating across multiple editors', async () => {
+      const host = await buildClient()
+      const guest = await buildClient()
+
+      const hostPortal = await host.createPortal()
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-1', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      const guestPortalDelegate = new FakePortalDelegate()
+      const guestPortal = await guest.joinPortal(hostPortal.id)
+      await guestPortal.setDelegate(guestPortalDelegate)
+      assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
+
+      // Extend the tether when the follower performs an action
+      const guestEditorProxy1 = guestPortalDelegate.getTetherEditorProxy()
+      guestEditorProxy1.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guestPortal.resolveFollowState() === FollowState.EXTENDED)
+
+      // Retract an extended tether if leader moves to a different editor and
+      // the tether disconnect window has elapsed since the last action taken by
+      // by the follower
+      await timeout(guestPortal.tetherDisconnectWindow)
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-2', text: ('y'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+      await condition(() => (
+        guestPortal.resolveFollowState() === FollowState.RETRACTED &&
+        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+      ))
+
+      // Disconnect an extended tether if leader moves to a different editor
+      // within the disconnect window.
+      const guestEditorProxy2 = guestPortalDelegate.getTetherEditorProxy()
+      guestEditorProxy2.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guestPortal.resolveFollowState() === FollowState.EXTENDED)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+      await condition(() => (
+        guestPortal.resolveFollowState() === FollowState.DISCONNECTED &&
+        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+      ))
+    })
+
+    test('extending, retracting, and disconnecting when collaborating in a single editor', async () => {
       const host = await buildClient()
       const guest = await buildClient()
 
