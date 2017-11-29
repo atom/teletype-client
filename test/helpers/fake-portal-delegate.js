@@ -8,7 +8,7 @@ class FakePortalDelegate {
     this.joinEvents = []
     this.leaveEvents = []
     this.editorProxies = new Set()
-    this.activeEditorProxyChangeCount = 0
+    this.tetherEditorProxyChangeCount = 0
     this.tetherPosition = null
     this.activePositionsBySiteId = {}
   }
@@ -45,35 +45,34 @@ class FakePortalDelegate {
   removeEditorProxy (editorProxy) {
     assert(this.editorProxies.has(editorProxy), 'Can only remove editor proxies that had previously been added')
     this.editorProxies.delete(editorProxy)
-    if (this.activeEditorProxy === editorProxy) {
-      this.activeEditorProxy = null
-      this.activeEditorProxyChangeCount++
+    if (this.tetherEditorProxy == editorProxy) {
+      this.tetherEditorProxy = null
+      this.tetherEditorProxyChangeCount++
     }
-  }
-
-  async activateEditorProxy (editorProxy) {
-    this.activeEditorProxy = editorProxy
-    this.activeEditorProxyChangeCount++
   }
 
   editorProxyForURI (uri) {
     return Array.from(this.editorProxies).find((e) => e.bufferProxy.uri === uri)
   }
 
-  getActiveEditorProxy () {
-    return this.activeEditorProxy
+  getTetherEditorProxy () {
+    return this.tetherEditorProxy
   }
 
-  getActiveBufferProxyURI () {
-    return (this.activeEditorProxy) ? this.activeEditorProxy.bufferProxy.uri : null
+  getTetherBufferProxyURI () {
+    return (this.tetherEditorProxy) ? this.tetherEditorProxy.bufferProxy.uri : null
   }
 
   getEditorProxies () {
     return Array.from(this.editorProxies)
   }
 
-  updateTether (state, position) {
+  updateTether (state, editorProxy, position) {
     this.tetherState = state
+    if (editorProxy != this.tetherEditorProxy) {
+      this.tetherEditorProxy = editorProxy
+      this.tetherEditorProxyChangeCount++
+    }
     this.tetherPosition = position
   }
 

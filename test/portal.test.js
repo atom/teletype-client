@@ -130,18 +130,18 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       // Don't notify guests when setting the active editor proxy to the same value it currently has.
-      hostPortal.activateEditorProxy(hostPortal.testDelegate.getActiveEditorProxy())
+      hostPortal.activateEditorProxy(hostPortal.testDelegate.getTetherEditorProxy())
 
       // Set the active editor proxy to a different value to ensure guests are notified only of this change.
       const originalBufferProxy = await hostPortal.createBufferProxy({uri: 'original-uri', text: ''})
       const originalEditorProxy = await hostPortal.createEditorProxy({bufferProxy: originalBufferProxy})
       hostPortal.activateEditorProxy(originalEditorProxy)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'original-uri' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'original-uri' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
 
@@ -151,7 +151,7 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       // Ensure no race condition occurs on the guest when fetching new editor
       // proxies for the first time and, at the same time, receiving a request
@@ -161,8 +161,8 @@ suite('Portal', () => {
       hostPortal.activateEditorProxy(newEditorProxy)
       hostPortal.activateEditorProxy(null)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === null &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 2
+        guestPortal.testDelegate.getTetherBufferProxyURI() === null &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 2
       ))
     })
 
@@ -172,7 +172,7 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       const bufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
       const editorProxy1 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy1})
@@ -184,8 +184,8 @@ suite('Portal', () => {
       hostPortal.activateEditorProxy(null)
       hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-2' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
 
@@ -195,7 +195,7 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       const bufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
       const editorProxy1 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy1})
@@ -207,8 +207,8 @@ suite('Portal', () => {
       hostPortal.activateEditorProxy(null)
       hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-2' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
   })

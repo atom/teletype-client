@@ -74,7 +74,7 @@ suite('Client Integration', () => {
     const guestPortal = await guest.joinPortal(hostPortal.id)
     await guestPortal.setDelegate(guestPortalDelegate)
 
-    const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+    const guestEditorProxy = guestPortalDelegate.getTetherEditorProxy()
     const guestEditorDelegate = new FakeEditorDelegate()
     guestEditorProxy.setDelegate(guestEditorDelegate)
 
@@ -171,14 +171,14 @@ suite('Client Integration', () => {
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
 
       await guest1Portal.setDelegate(guest1PortalDelegate)
-      assert.equal(guest1PortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
+      assert.equal(guest1PortalDelegate.getTetherBufferProxyURI(), 'buffer-a')
       assert.equal(guest1PortalDelegate.getEditorProxies().length, 1)
 
       const guest2PortalDelegate = new FakePortalDelegate()
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
 
       await guest2Portal.setDelegate(guest2PortalDelegate)
-      assert.equal(guest2PortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
+      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-a')
       assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
 
       // Activating proxies on the leader automatically activates them on followers too.
@@ -187,8 +187,8 @@ suite('Client Integration', () => {
       hostPortal.activateEditorProxy(hostEditorProxy2)
 
       await condition(() => (
-        guest1PortalDelegate.getActiveBufferProxyURI() === 'buffer-b' &&
-        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-b'
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-b' &&
+        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-b'
       ))
 
       assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
@@ -198,8 +198,8 @@ suite('Client Integration', () => {
       hostPortal.activateEditorProxy(hostEditorProxy1)
 
       await condition(() => (
-        guest1PortalDelegate.getActiveBufferProxyURI() === 'buffer-a' &&
-        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-a'
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-a' &&
+        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-a'
       ))
 
       assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
@@ -211,31 +211,31 @@ suite('Client Integration', () => {
       hostPortal.activateEditorProxy(hostEditorProxy3)
       guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-b'))
 
-      guest1PortalDelegate.activeEditorProxyChangeCount = 0
-      guest2PortalDelegate.activeEditorProxyChangeCount = 0
+      guest1PortalDelegate.tetherEditorProxyChangeCount = 0
+      guest2PortalDelegate.tetherEditorProxyChangeCount = 0
       await condition(() => (
         guest1PortalDelegate.getEditorProxies().length === 3 &&
         guest2PortalDelegate.getEditorProxies().length === 3
       ))
 
-      assert.equal(guest1PortalDelegate.activeEditorProxyChangeCount, 0)
-      assert.equal(guest2PortalDelegate.activeEditorProxyChangeCount, 1)
-      assert.equal(guest2PortalDelegate.getActiveBufferProxyURI(), 'buffer-c')
+      assert.equal(guest1PortalDelegate.tetherEditorProxyChangeCount, 0)
+      assert.equal(guest2PortalDelegate.tetherEditorProxyChangeCount, 1)
+      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-c')
 
       // Any participant can follow other guests.
       hostPortal.follow(guest1Portal.siteId)
       guest2Portal.follow(guest1Portal.siteId)
 
       await condition(() => (
-        hostPortalDelegate.getActiveBufferProxyURI() === 'buffer-b' &&
-        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-b'
+        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-b' &&
+        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-b'
       ))
 
       guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-a'))
 
       await condition(() => (
-        hostPortalDelegate.getActiveBufferProxyURI() === 'buffer-a' &&
-        guest2PortalDelegate.getActiveBufferProxyURI() === 'buffer-a'
+        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-a' &&
+        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-a'
       ))
 
       // Removing previously activated proxies from the host portal deletes them from all the guest portals too.
@@ -274,7 +274,7 @@ suite('Client Integration', () => {
       assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
       assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 9, column: 9})
 
-      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+      const guestEditorProxy = guestPortalDelegate.getTetherEditorProxy()
       const guestEditorDelegate = new FakeEditorDelegate()
       guestEditorDelegate.updateViewport(5, 15)
       guestEditorProxy.setDelegate(guestEditorDelegate)
@@ -402,7 +402,7 @@ suite('Client Integration', () => {
       const guestPortal = await guest.joinPortal(hostPortal.id)
       await guestPortal.setDelegate(guestPortalDelegate)
 
-      const guestEditor1Proxy = guestPortalDelegate.getActiveEditorProxy()
+      const guestEditor1Proxy = guestPortalDelegate.getTetherEditorProxy()
       const guestEditor1Delegate = new FakeEditorDelegate()
       guestEditor1Proxy.setDelegate(guestEditor1Delegate)
       guestEditor1Proxy.updateSelections({
@@ -492,7 +492,7 @@ suite('Client Integration', () => {
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
       await guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest1Editor1Proxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1Editor1Proxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1Editor1Delegate = new FakeEditorDelegate()
       guest1Editor1Delegate.updateViewport(5, 15)
       guest1Editor1Proxy.setDelegate(guest1Editor1Delegate)
@@ -501,7 +501,7 @@ suite('Client Integration', () => {
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
       await guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest2Editor1Proxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2Editor1Proxy = guest2PortalDelegate.getTetherEditorProxy()
       const guest2Editor1Delegate = new FakeEditorDelegate()
       guest2Editor1Delegate.updateViewport(5, 15)
       guest2Editor1Proxy.setDelegate(guest2Editor1Delegate)
@@ -553,7 +553,7 @@ suite('Client Integration', () => {
       const guest3Portal = await guest3.joinPortal(hostPortal.id)
       await guest3Portal.setDelegate(guest3PortalDelegate)
 
-      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3EditorProxy = guest3PortalDelegate.getTetherEditorProxy()
       const guest3EditorDelegate = new FakeEditorDelegate()
       guest3EditorDelegate.updateViewport(5, 15)
       guest3EditorProxy.setDelegate(guest3EditorDelegate)
@@ -588,7 +588,7 @@ suite('Client Integration', () => {
       ))
 
       // Disconnecting the tether on Guest1 breaks transitivity.
-      const guest1Editor2Proxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1Editor2Proxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1Editor2Delegate = new FakeEditorDelegate()
       guest1Editor2Delegate.updateViewport(6, 15)
       guest1Editor2Proxy.setDelegate(guest1Editor2Delegate)
@@ -631,7 +631,7 @@ suite('Client Integration', () => {
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
       await guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1EditorDelegate = new FakeEditorDelegate()
       guest1EditorDelegate.updateViewport(5, 15)
       guest1EditorProxy.setDelegate(guest1EditorDelegate)
@@ -640,7 +640,7 @@ suite('Client Integration', () => {
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
       await guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
       const guest2EditorDelegate = new FakeEditorDelegate()
       guest2EditorDelegate.updateViewport(5, 15)
       guest2EditorProxy.setDelegate(guest2EditorDelegate)
@@ -730,7 +730,7 @@ suite('Client Integration', () => {
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
     await guest1Portal.setDelegate(guest1PortalDelegate)
 
-    const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+    const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
     const guest1EditorDelegate = new FakeEditorDelegate()
     guest1EditorProxy.setDelegate(guest1EditorDelegate)
 
@@ -738,7 +738,7 @@ suite('Client Integration', () => {
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
     await guest2Portal.setDelegate(guest2PortalDelegate)
 
-    const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+    const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
     const guest2EditorDelegate = new FakeEditorDelegate()
     guest2EditorProxy.setDelegate(guest2EditorDelegate)
 
@@ -806,13 +806,13 @@ suite('Client Integration', () => {
     const guestPortal = await guest.joinPortal(hostPortal.id)
     const guestPortalDelegate = new FakePortalDelegate()
     await guestPortal.setDelegate(guestPortalDelegate)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    const guestEditorProxy1 = guestPortalDelegate.getActiveEditorProxy()
+    await condition(() => guestPortalDelegate.getTetherEditorProxy() != null)
+    const guestEditorProxy1 = guestPortalDelegate.getTetherEditorProxy()
     guestEditorProxy1.setDelegate(new FakeEditorDelegate())
 
     hostPortal.activateEditorProxy(hostEditorProxy2)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() !== guestEditorProxy1)
-    const guestEditorProxy2 = guestPortalDelegate.getActiveEditorProxy()
+    await condition(() => guestPortalDelegate.getTetherEditorProxy() !== guestEditorProxy1)
+    const guestEditorProxy2 = guestPortalDelegate.getTetherEditorProxy()
     guestEditorProxy2.setDelegate(new FakeEditorDelegate())
 
     assert.equal(guestEditorProxy1.bufferProxy, guestEditorProxy2.bufferProxy)
@@ -868,12 +868,12 @@ suite('Client Integration', () => {
       hostPortal.activateEditorProxy(hostEditorProxy)
 
       await condition(() =>
-        guest1PortalDelegate.getActiveEditorProxy() != null &&
-        guest2PortalDelegate.getActiveEditorProxy() != null &&
-        guest3PortalDelegate.getActiveEditorProxy() != null
+        guest1PortalDelegate.getTetherEditorProxy() != null &&
+        guest2PortalDelegate.getTetherEditorProxy() != null &&
+        guest3PortalDelegate.getTetherEditorProxy() != null
       )
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1BufferProxy = guest1EditorProxy.bufferProxy
       const guest1BufferDelegate = new FakeBufferDelegate()
       guest1BufferProxy.setDelegate(guest1BufferDelegate)
@@ -883,7 +883,7 @@ suite('Client Integration', () => {
         {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
       )
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
       const guest2BufferProxy = guest2EditorProxy.bufferProxy
       const guest2BufferDelegate = new FakeBufferDelegate()
       guest2BufferProxy.setDelegate(guest2BufferDelegate)
@@ -893,7 +893,7 @@ suite('Client Integration', () => {
         {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
       )
 
-      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3EditorProxy = guest3PortalDelegate.getTetherEditorProxy()
       const guest3BufferProxy = guest3EditorProxy.bufferProxy
       const guest3BufferDelegate = new FakeBufferDelegate()
       guest3BufferProxy.setDelegate(guest3BufferDelegate)
@@ -976,7 +976,7 @@ suite('Client Integration', () => {
     const client2GuestPortalDelegate = new FakePortalDelegate()
     const client2GuestPortal = await client2.joinPortal(client1HostPortal.id)
     await client2GuestPortal.setDelegate(client2GuestPortalDelegate)
-    assert.equal(client2GuestPortalDelegate.getActiveBufferProxyURI(), 'client-1-buffer')
+    assert.equal(client2GuestPortalDelegate.getTetherBufferProxyURI(), 'client-1-buffer')
 
     // while still participating as a guest in the portal above, client2 hosts a portal with client1 as a guest
     const client2HostPortal = await client2.createPortal()
@@ -987,7 +987,7 @@ suite('Client Integration', () => {
     const client1GuestPortalDelegate = new FakePortalDelegate()
     const client1GuestPortal = await client1.joinPortal(client2HostPortal.id)
     await client1GuestPortal.setDelegate(client1GuestPortalDelegate)
-    assert.equal(client1GuestPortalDelegate.getActiveBufferProxyURI(), 'client-2-buffer')
+    assert.equal(client1GuestPortalDelegate.getTetherBufferProxyURI(), 'client-2-buffer')
   })
 
   test('attempting to join a non-existent portal', async () => {
