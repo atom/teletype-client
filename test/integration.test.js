@@ -720,72 +720,89 @@ suite('Client Integration', () => {
     hostPortal.setDelegate(hostPortalDelegate)
     portals.push(hostPortal)
 
-    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-uri', text: ('x'.repeat(30) + '\n').repeat(30)})
-    const hostEditorProxy = await hostPortal.createEditorProxy({
-      bufferProxy: hostBufferProxy,
+    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy1,
       selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
     })
-    const hostEditorDelegate = new FakeEditorDelegate()
-    hostEditorProxy.setDelegate(hostEditorDelegate)
-    hostPortal.activateEditorProxy(hostEditorProxy)
+    hostPortal.activateEditorProxy(hostEditorProxy1)
 
     const guest1PortalDelegate = new FakePortalDelegate()
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
     await guest1Portal.setDelegate(guest1PortalDelegate)
     portals.push(guest1Portal)
 
-    const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
-    const guest1EditorDelegate = new FakeEditorDelegate()
-    guest1EditorProxy.setDelegate(guest1EditorDelegate)
-
     const guest2PortalDelegate = new FakePortalDelegate()
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
     await guest2Portal.setDelegate(guest2PortalDelegate)
     portals.push(guest2Portal)
 
-    const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
-    const guest2EditorDelegate = new FakeEditorDelegate()
-    guest2EditorProxy.setDelegate(guest2EditorDelegate)
-
     // Update active positions after the leader updates its selections.
-    hostEditorProxy.updateSelections({
+    hostEditorProxy1.updateSelections({
       1: {range: range([5, 4], [9, 6])},
       2: {range: range([2, 7], [4, 4])}
     })
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 4)},
-      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(4, 4)},
-      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(4, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 4)}
     ])
 
     // Update active positions after a text change.
-    hostBufferProxy.setTextInRange(point(4, 0), point(4, 0), 'X')
+    hostBufferProxy1.setTextInRange(point(4, 0), point(4, 0), 'X')
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
-      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
-      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(4, 5)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 5)}
     ])
 
     // Update active positions after the leader changes.
-    guest1EditorProxy.updateSelections({
+    guest1PortalDelegate.getTetherEditorProxy().updateSelections({
       1: {range: range([5, 4], [9, 6]), reversed: true}
     })
     guest2Portal.follow(guest1Portal.siteId)
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
-      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(5, 4)},
-      {siteId: 3, editorProxyId: hostEditorProxy.id, position: point(5, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+    ])
+
+    // Update active positions after host switches to a different editor proxy.
+    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy2,
+      selections: {1: {range: {start: {row: 2, column: 2}, end: {row: 2, column: 2}}}}
+    })
+    hostPortal.activateEditorProxy(hostEditorProxy2)
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+    ])
+
+    // Update active positions after a guest switches to a different editor proxy.
+    const guest1EditorProxy2 = guest1PortalDelegate.editorProxyForURI('buffer-b')
+    guest1Portal.activateEditorProxy(guest1EditorProxy2)
+    guest1EditorProxy2.updateSelections({
+      1: {range: range([1, 0], [1, 0])}
+    }, {initialUpdate: true})
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)},
+      {siteId: 3, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
     ])
 
     // Update active positions after a site disconnects.
     guest2Portal.dispose()
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy.id, position: point(4, 5)},
-      {siteId: 2, editorProxyId: hostEditorProxy.id, position: point(5, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
     ])
 
     function assertActivePositions (expectedPositions) {
