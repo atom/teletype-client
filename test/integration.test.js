@@ -270,14 +270,14 @@ suite('Client Integration', () => {
       const guestPortal = await guest.joinPortal(hostPortal.id)
       await guestPortal.setDelegate(guestPortalDelegate)
 
+      // Guests immediately jump to host's cursor position after joining.
+      assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 9, column: 9})
+
       const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
       const guestEditorDelegate = new FakeEditorDelegate()
       guestEditorDelegate.updateViewport(5, 15)
       guestEditorProxy.setDelegate(guestEditorDelegate)
-
-      // Guests immediately jump to host's cursor position after joining.
-      assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
-      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 9, column: 9})
 
       // Guests continue to follow host's cursor as it moves.
       hostEditorProxy.updateSelections({
