@@ -390,22 +390,23 @@ suite('Client Integration', () => {
     test('showing and hiding selections when tether states change', async () => {
       const host = await buildClient()
       const hostPortal = await host.createPortal()
-      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ('x'.repeat(30) + '\n').repeat(30)})
-      const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {
         1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}}
       }})
-      const hostEditorDelegate = new FakeEditorDelegate()
-      hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.activateEditorProxy(hostEditorProxy)
+      const hostEditor1Delegate = new FakeEditorDelegate()
+      hostEditorProxy1.setDelegate(hostEditor1Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
 
       const guest = await buildClient()
       const guestPortalDelegate = new FakePortalDelegate()
       const guestPortal = await guest.joinPortal(hostPortal.id)
       await guestPortal.setDelegate(guestPortalDelegate)
-      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
-      const guestEditorDelegate = new FakeEditorDelegate()
-      guestEditorProxy.setDelegate(guestEditorDelegate)
-      guestEditorProxy.updateSelections({
+
+      const guestEditor1Proxy = guestPortalDelegate.getActiveEditorProxy()
+      const guestEditor1Delegate = new FakeEditorDelegate()
+      guestEditor1Proxy.setDelegate(guestEditor1Delegate)
+      guestEditor1Proxy.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       }, {initialUpdate: true})
 
@@ -413,38 +414,64 @@ suite('Client Integration', () => {
 
       // Cursors are not rendered locally or remotely for followers with
       // retracted tethers
-      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+      await condition(() => deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}))
 
       // When the tether is extended, selections appear
-      guestEditorProxy.updateSelections({
+      guestEditor1Proxy.updateSelections({
         1: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return selection && deepEqual(selection.range, {start: {row: 1, column: 1}, end: {row: 1, column: 1}})
       })
 
       // Selections disappear when the tether is retracted again
       await timeout(guestPortal.tetherDisconnectWindow)
-      guestEditorDelegate.updateViewport(0, 6)
-      hostEditorProxy.updateSelections({
+      guestEditor1Delegate.updateViewport(0, 6)
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
       await condition(() => deepEqual(guestPortal.resolveLeaderPosition(), {row: 12, column: 12}))
-      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+      await condition(() => deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}))
 
       // Disconnecting the tether shows the selections again
-      guestEditorDelegate.updateViewport(6, 15)
-      guestEditorProxy.updateSelections({
+      guestEditor1Delegate.updateViewport(6, 15)
+      guestEditor1Proxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      hostEditorProxy.updateSelections({
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}})
       })
+
+      // Retracting the tether when the host is on a different editor proxy hides follower selections.
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {
+        1: {range: {start: {row: 1, column: 3}, end: {row: 2, column: 4}}}
+      }})
+      const hostEditor2Delegate = new FakeEditorDelegate()
+      hostEditorProxy2.setDelegate(hostEditor2Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+
+      await condition(() => (
+        guestPortalDelegate.getEditorProxies().length === 2 &&
+        deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {})
+      ))
+
+      const guestEditor2Proxy = guestPortalDelegate.editorProxyForURI('buffer-b')
+      const guestEditor2Delegate = new FakeEditorDelegate()
+      guestEditor2Proxy.setDelegate(guestEditor2Delegate)
+      assert.deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1)[1].range, {start: {row: 1, column: 3}, end: {row: 2, column: 4}})
+
+      guestPortal.follow(1)
+
+      await condition(() => (
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor2Delegate.getSelectionsForSiteId(2), {})
+      ))
     })
 
     test('transitive tethering (without cycles)', async () => {
