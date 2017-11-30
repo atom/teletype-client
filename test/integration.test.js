@@ -297,7 +297,7 @@ suite('Client Integration', () => {
 
       // When the tether is extended, the follower's cursor does not follow
       // the tether's position as long as it remains visible in the viewport
-      assert(guestEditorDelegate.isPositionVisible({row: 11, column: 11}))
+      assert(!guestEditorDelegate.isScrollNeededToViewPosition({row: 11, column: 11}))
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 11, column: 11}, end: {row: 11, column: 11}}}
       })
@@ -311,7 +311,7 @@ suite('Client Integration', () => {
       // tether disconnect window has elapsed since the last cursor movement
       // by the follower
       await timeout(guestPortal.tetherDisconnectWindow)
-      assert(!guestEditorDelegate.isPositionVisible({row: 20, column: 20}))
+      assert(guestEditorDelegate.isScrollNeededToViewPosition({row: 20, column: 20}))
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 20, column: 20}, end: {row: 20, column: 20}}}
       })
@@ -377,7 +377,7 @@ suite('Client Integration', () => {
       // viewport would have changed when we reconnected the tether, but in
       // this test we're only concerned with the tether position being out of
       // view when we indicate a scroll.
-      assert(!guestEditorDelegate.isPositionVisible({row: 1, column: 1}))
+      assert(guestEditorDelegate.isScrollNeededToViewPosition({row: 1, column: 1}))
       guestEditorProxy.didScroll()
       assert.equal(guestPortalDelegate.getTetherState(), FollowState.DISCONNECTED)
       hostEditorProxy.updateSelections({
