@@ -167,7 +167,7 @@ suite('Client Integration', () => {
 
     await condition(() => guestPortalDelegate.getEditorProxies().length === 1)
 
-    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
     const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
     hostPortal.activateEditorProxy(hostEditorProxy2)
 
