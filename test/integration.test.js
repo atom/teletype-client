@@ -152,111 +152,46 @@ suite('Client Integration', () => {
     })
   })
 
+  test('adding and removing editor proxies', async () => {
+    const host = await buildClient()
+    const guest = await buildClient()
+
+    const hostPortal = await host.createPortal()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+    const guestPortalDelegate = new FakePortalDelegate()
+    guestPortal.setDelegate(guestPortalDelegate)
+
+    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+    hostPortal.activateEditorProxy(hostEditorProxy1)
+
+    await condition(() => guestPortalDelegate.getEditorProxies().length === 1)
+
+    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+    hostPortal.activateEditorProxy(hostEditorProxy2)
+
+    await condition(() => guestPortalDelegate.getEditorProxies().length === 2)
+
+    hostPortal.activateEditorProxy(hostEditorProxy1)
+    hostPortal.removeEditorProxy(hostEditorProxy2)
+
+    await condition(() => guestPortalDelegate.getEditorProxies().length === 1)
+
+    hostPortal.removeEditorProxy(hostEditorProxy1)
+
+    await condition(() => guestPortalDelegate.getEditorProxies().length === 0)
+  })
+
   suite('tethering to other participants', () => {
-    test('following leaders when they change their active editor proxy', async () => {
-      const host = await buildClient()
-      const guest1 = await buildClient()
-      const guest2 = await buildClient()
-
-      const hostPortal = await host.createPortal()
-      const hostPortalDelegate = new FakePortalDelegate()
-      hostPortal.setDelegate(hostPortalDelegate)
-
-      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
-      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
-      hostPortal.activateEditorProxy(hostEditorProxy1)
-
-      // When joining, guests automatically follow the host.
-      const guest1PortalDelegate = new FakePortalDelegate()
-      const guest1Portal = await guest1.joinPortal(hostPortal.id)
-
-      await guest1Portal.setDelegate(guest1PortalDelegate)
-      assert.equal(guest1PortalDelegate.getTetherBufferProxyURI(), 'buffer-a')
-      assert.equal(guest1PortalDelegate.getEditorProxies().length, 1)
-
-      const guest2PortalDelegate = new FakePortalDelegate()
-      const guest2Portal = await guest2.joinPortal(hostPortal.id)
-
-      await guest2Portal.setDelegate(guest2PortalDelegate)
-      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-a')
-      assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
-
-      // Activating proxies on the leader automatically activates them on followers too.
-      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
-      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {}})
-      hostPortal.activateEditorProxy(hostEditorProxy2)
-
-      await condition(() => (
-        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-b' &&
-        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-b'
-      ))
-
-      assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
-      assert.equal(guest2PortalDelegate.getEditorProxies().length, 2)
-
-      // Host can activate previously activated proxies.
-      hostPortal.activateEditorProxy(hostEditorProxy1)
-
-      await condition(() => (
-        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-a' &&
-        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-a'
-      ))
-
-      assert.equal(guest1PortalDelegate.getEditorProxies().length, 2)
-      assert.equal(guest2PortalDelegate.getEditorProxies().length, 2)
-
-      // Followers disconnect their tether if they activate a different editor proxy than the leader.
-      const hostBufferProxy3 = await hostPortal.createBufferProxy({uri: 'buffer-c', text: ''})
-      const hostEditorProxy3 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy3, selections: {}})
-      hostPortal.activateEditorProxy(hostEditorProxy3)
-      guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-b'))
-
-      guest1PortalDelegate.tetherEditorProxyChangeCount = 0
-      guest2PortalDelegate.tetherEditorProxyChangeCount = 0
-      await condition(() => (
-        guest1PortalDelegate.getEditorProxies().length === 3 &&
-        guest2PortalDelegate.getEditorProxies().length === 3
-      ))
-
-      assert.equal(guest1PortalDelegate.tetherEditorProxyChangeCount, 0)
-      assert.equal(guest2PortalDelegate.tetherEditorProxyChangeCount, 1)
-      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-c')
-
-      // Any participant can follow other guests.
-      hostPortal.follow(guest1Portal.siteId)
-      guest2Portal.follow(guest1Portal.siteId)
-
-      await condition(() => (
-        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-b' &&
-        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-b'
-      ))
-
-      guest1Portal.activateEditorProxy(guest1PortalDelegate.editorProxyForURI('buffer-a'))
-
-      await condition(() => (
-        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-a' &&
-        guest2PortalDelegate.getTetherBufferProxyURI() === 'buffer-a'
-      ))
-
-      // Removing previously activated proxies from the host portal deletes them from all the guest portals too.
-      hostPortal.removeEditorProxy(hostEditorProxy2)
-      await condition(() => (
-        guest1PortalDelegate.getEditorProxies().length === 2 &&
-        guest2PortalDelegate.getEditorProxies().length === 2
-      ))
-
-      hostPortal.removeEditorProxy(hostEditorProxy1)
-      await condition(() => (
-        guest1PortalDelegate.getEditorProxies().length === 1 &&
-        guest2PortalDelegate.getEditorProxies().length === 1
-      ))
-    })
-
     test('extending, retracting, and disconnecting when collaborating across multiple editors', async () => {
       const host = await buildClient()
       const guest = await buildClient()
 
       const hostPortal = await host.createPortal()
+      const hostPortalDelegate = new FakePortalDelegate()
+      hostPortal.setDelegate(hostPortalDelegate)
+
       const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-1', text: ('x'.repeat(30) + '\n').repeat(30)})
       const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
       hostPortal.activateEditorProxy(hostEditorProxy1)
@@ -295,15 +230,14 @@ suite('Client Integration', () => {
       ))
 
       // Can reconnect tether after disconnecting.
-      guestPortal.follow(hostPortal.siteId)
-      await condition(() => (
-        guestPortal.resolveFollowState() === FollowState.RETRACTED &&
-        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-1'
-      ))
-      hostEditorProxy1.updateSelections({
-        2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
+      hostPortal.follow(guestPortal.siteId)
+      guestEditorProxy2.updateSelections({
+        2: {range: {start: {row: 4, column: 4}, end: {row: 4, column: 4}}}
       })
-      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 1, column: 1}))
+      await condition(() => (
+        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-2' &&
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 4, column: 4})
+      ))
     })
 
     test('extending, retracting, and disconnecting when collaborating in a single editor', async () => {
@@ -440,7 +374,7 @@ suite('Client Integration', () => {
       assert.notDeepEqual(guestPortalDelegate.getTetherPosition(), {row: 0, column: 0})
     })
 
-    test('showing and hiding selections when tether states change', async () => {
+    test('showing and hiding selections', async () => {
       const host = await buildClient()
       const hostPortal = await host.createPortal()
       const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
@@ -500,7 +434,8 @@ suite('Client Integration', () => {
         return selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}})
       })
 
-      // Retracting the tether when the host is on a different editor proxy hides follower selections.
+      // Activating an editor proxy hides selection on the previously active
+      // editor proxy and shows them on the new one.
       const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
       const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {
         1: {range: {start: {row: 1, column: 3}, end: {row: 2, column: 4}}}
@@ -509,15 +444,30 @@ suite('Client Integration', () => {
       hostEditorProxy2.setDelegate(hostEditor2Delegate)
       hostPortal.activateEditorProxy(hostEditorProxy2)
 
-      await condition(() => (
-        guestPortalDelegate.getEditorProxies().length === 2 &&
-        deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {})
-      ))
+      await condition(() => guestPortalDelegate.getEditorProxies().length === 2)
 
       const guestEditor2Proxy = guestPortalDelegate.editorProxyForURI('buffer-b')
       const guestEditor2Delegate = new FakeEditorDelegate()
       guestEditor2Proxy.setDelegate(guestEditor2Delegate)
-      assert.deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1)[1].range, {start: {row: 1, column: 3}, end: {row: 2, column: 4}})
+      guestEditor2Proxy.updateSelections({
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      }, {initialUpdate: true})
+
+      await condition(() => (
+        deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {}) &&
+        !deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1), {})
+      ))
+
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      await condition(() => (
+        !deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {}) &&
+        deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1), {})
+      ))
+
+      // Retracting the tether when the host is on a different editor proxy hides follower selections.
+      assert.notDeepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {})
+      assert.deepEqual(hostEditor2Delegate.getSelectionsForSiteId(2), {})
 
       guestPortal.follow(1)
 
