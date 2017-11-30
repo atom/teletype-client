@@ -244,7 +244,8 @@ suite('Client Integration', () => {
       assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-2')
       assert.deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 2, column: 1})
 
-      // Can reconnect tether after disconnecting.
+      // When you start to follow a participant, you go to their position in
+      // their active editor
       hostPortal.follow(guest1Portal.siteId)
       guest1EditorProxy2.updateSelections({
         2: {range: {start: {row: 4, column: 4}, end: {row: 4, column: 4}}}
@@ -480,7 +481,7 @@ suite('Client Integration', () => {
         deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1), {})
       ))
 
-      // Retracting the tether when the host is on a different editor proxy hides follower selections.
+      // Retracting the tether when the leader is on a different editor proxy hides follower selections.
       assert.notDeepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {})
       assert.deepEqual(hostEditor2Delegate.getSelectionsForSiteId(2), {})
 
