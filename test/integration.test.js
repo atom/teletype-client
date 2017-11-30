@@ -186,7 +186,7 @@ suite('Client Integration', () => {
   suite('tethering to other participants', () => {
     test('extending, retracting, and disconnecting when collaborating across multiple editors', async () => {
       const host = await buildClient()
-      const guest = await buildClient()
+      const guest1 = await buildClient()
 
       const hostPortal = await host.createPortal()
       const hostPortalDelegate = new FakePortalDelegate()
@@ -196,42 +196,57 @@ suite('Client Integration', () => {
       const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
       hostPortal.activateEditorProxy(hostEditorProxy1)
 
-      const guestPortalDelegate = new FakePortalDelegate()
-      const guestPortal = await guest.joinPortal(hostPortal.id)
-      await guestPortal.setDelegate(guestPortalDelegate)
-      assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
+      const guest1PortalDelegate = new FakePortalDelegate()
+      const guest1Portal = await guest1.joinPortal(hostPortal.id)
+      await guest1Portal.setDelegate(guest1PortalDelegate)
+      assert.equal(guest1Portal.resolveFollowState(), FollowState.RETRACTED)
 
       // Extend the tether when the follower performs an action
-      const guestEditorProxy1 = guestPortalDelegate.getTetherEditorProxy()
-      guestEditorProxy1.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
-      await condition(() => guestPortal.resolveFollowState() === FollowState.EXTENDED)
+      const guest1EditorProxy1 = guest1PortalDelegate.getTetherEditorProxy()
+      guest1EditorProxy1.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guest1Portal.resolveFollowState() === FollowState.EXTENDED)
 
       // Retract an extended tether if leader moves to a different editor and
       // the tether disconnect window has elapsed since the last action taken by
       // by the follower
-      await timeout(guestPortal.tetherDisconnectWindow)
+      await timeout(guest1Portal.tetherDisconnectWindow)
       const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-2', text: ('y'.repeat(30) + '\n').repeat(30)})
       const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
       hostPortal.activateEditorProxy(hostEditorProxy2)
       await condition(() => (
-        guestPortal.resolveFollowState() === FollowState.RETRACTED &&
-        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+        guest1Portal.resolveFollowState() === FollowState.RETRACTED &&
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
       ))
 
       // Disconnect an extended tether if leader moves to a different editor
       // within the disconnect window.
-      const guestEditorProxy2 = guestPortalDelegate.getTetherEditorProxy()
-      guestEditorProxy2.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
-      await condition(() => guestPortal.resolveFollowState() === FollowState.EXTENDED)
+      const guest1EditorProxy2 = guest1PortalDelegate.getTetherEditorProxy()
+      guest1EditorProxy2.updateSelections({
+        1: {range: range([2, 1], [2, 1])}
+      }, {initialUpdate: true})
+
+      guest1EditorProxy2.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guest1Portal.resolveFollowState() === FollowState.EXTENDED)
       hostPortal.activateEditorProxy(hostEditorProxy1)
       await condition(() => (
-        guestPortal.resolveFollowState() === FollowState.DISCONNECTED &&
-        guestPortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+        guest1Portal.resolveFollowState() === FollowState.DISCONNECTED &&
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
       ))
 
+      // New guests can start following existing participants.
+      const guest2 = await buildClient()
+      const guest2PortalDelegate = new FakePortalDelegate()
+      const guest2Portal = await guest2.joinPortal(hostPortal.id)
+      await guest2Portal.setDelegate(guest2PortalDelegate)
+
+      guest2Portal.follow(guest1Portal.siteId)
+
+      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-2')
+      assert.deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 2, column: 1})
+
       // Can reconnect tether after disconnecting.
-      hostPortal.follow(guestPortal.siteId)
-      guestEditorProxy2.updateSelections({
+      hostPortal.follow(guest1Portal.siteId)
+      guest1EditorProxy2.updateSelections({
         2: {range: {start: {row: 4, column: 4}, end: {row: 4, column: 4}}}
       })
       await condition(() => (

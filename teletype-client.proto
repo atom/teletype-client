@@ -4,9 +4,12 @@ import "teletype-crdt.proto";
 
 message PortalSubscriptionResponse {
   map<string, uint32> site_ids_by_peer_id = 1;
-  EditorProxy active_editor_proxy = 2;
-  BufferProxy active_buffer_proxy = 3;
+  reserved 2; // active_editor_proxy field is no longer supported
+  reserved 3; // active_buffer_proxy field is no longer supported
   repeated Tether tethers = 4;
+  repeated BufferProxy active_buffer_proxies = 5;
+  repeated EditorProxy active_editor_proxies = 6;
+  map<uint32, uint32> active_editor_proxy_ids_by_site_id = 7;
 }
 
 message PortalUpdate {
