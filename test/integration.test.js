@@ -719,22 +719,19 @@ suite('Client Integration', () => {
       hostPortal.follow(guest1Portal.siteId)
 
       await condition(() => (
-        hostPortal.resolveLeaderSiteId() == hostPortal.siteId &&
-        guest1Portal.resolveLeaderSiteId() === hostPortal.siteId &&
-        guest2Portal.resolveLeaderSiteId() === hostPortal.siteId
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 5, column: 5})
       ))
 
       assert.equal(hostPortal.getFollowedSiteId(), null)
       assert.equal(hostPortalDelegate.getTetherState(), FollowState.DISCONNECTED)
-      assert.deepEqual(hostPortalDelegate.getTetherPosition(), {row: 5, column: 5})
 
       assert.equal(guest1Portal.getFollowedSiteId(), guest2Portal.siteId)
       assert.equal(guest1PortalDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 5, column: 5})
 
       assert.equal(guest2Portal.getFollowedSiteId(), hostPortal.siteId)
       assert.equal(guest2PortalDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 5, column: 5})
 
       // The site which breaks the cycle becomes the leader.
       guest1EditorProxy.updateSelections({
@@ -743,22 +740,19 @@ suite('Client Integration', () => {
       guest1Portal.unfollow()
 
       await condition(() => (
-        hostPortal.resolveLeaderSiteId() === guest1Portal.siteId &&
-        guest1Portal.resolveLeaderSiteId() == guest1Portal.siteId &&
-        guest2Portal.resolveLeaderSiteId() === guest1Portal.siteId
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 13, column: 13})
       ))
 
       assert.equal(hostPortal.getFollowedSiteId(), guest1Portal.siteId)
       assert.equal(hostPortalDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(hostPortalDelegate.getTetherPosition(), {row: 13, column: 13})
 
       assert.equal(guest1Portal.getFollowedSiteId(), null)
       assert.equal(guest1PortalDelegate.getTetherState(), FollowState.DISCONNECTED)
-      assert.deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 13, column: 13})
 
       assert.equal(guest2Portal.getFollowedSiteId(), hostPortal.siteId)
       assert.equal(guest2PortalDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 13, column: 13})
     })
   })
 
