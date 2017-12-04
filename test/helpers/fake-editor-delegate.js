@@ -18,10 +18,12 @@ class Editor {
     this.viewport = {startRow, endRow}
   }
 
-  isScrollNeededToViewPosition ({row}) {
+  isScrollNeededToViewPosition (position) {
+    assert(position && position.row != null && position.column != null)
+
     if (this.viewport) {
-      const {startRow, endRow} = this.viewport
-      return row < startRow || row > endRow
+      const {row} = position
+      return row < this.viewport.startRow || row > this.viewport.endRow
     } else {
       return false
     }
