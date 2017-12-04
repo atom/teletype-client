@@ -154,33 +154,47 @@ suite('Client Integration', () => {
 
   test('adding and removing editor proxies', async () => {
     const host = await buildClient()
-    const guest = await buildClient()
-
     const hostPortal = await host.createPortal()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    const guestPortalDelegate = new FakePortalDelegate()
-    guestPortal.setDelegate(guestPortalDelegate)
+
+    const guest1 = await buildClient()
+    const guest1Portal = await guest1.joinPortal(hostPortal.id)
+    const guest1PortalDelegate = new FakePortalDelegate()
+    guest1Portal.setDelegate(guest1PortalDelegate)
+
+    assert.equal(guest1PortalDelegate.getEditorProxies().length, 0)
 
     const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
     const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
     hostPortal.activateEditorProxy(hostEditorProxy1)
 
-    await condition(() => guestPortalDelegate.getEditorProxies().length === 1)
+    await condition(() => guest1PortalDelegate.getEditorProxies().length === 1)
 
     const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
     const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
     hostPortal.activateEditorProxy(hostEditorProxy2)
 
-    await condition(() => guestPortalDelegate.getEditorProxies().length === 2)
+    await condition(() => guest1PortalDelegate.getEditorProxies().length === 2)
 
-    hostPortal.activateEditorProxy(hostEditorProxy1)
-    hostPortal.removeEditorProxy(hostEditorProxy2)
+    const guest2 = await buildClient()
+    const guest2Portal = await guest2.joinPortal(hostPortal.id)
+    const guest2PortalDelegate = new FakePortalDelegate()
+    guest2Portal.setDelegate(guest2PortalDelegate)
 
-    await condition(() => guestPortalDelegate.getEditorProxies().length === 1)
+    assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
 
     hostPortal.removeEditorProxy(hostEditorProxy1)
 
-    await condition(() => guestPortalDelegate.getEditorProxies().length === 0)
+    await condition(() => (
+      guest1PortalDelegate.getEditorProxies().length === 1 &&
+      guest2PortalDelegate.getEditorProxies().length === 1
+    ))
+
+    hostPortal.removeEditorProxy(hostEditorProxy2)
+
+    await condition(() => (
+      guest1PortalDelegate.getEditorProxies().length === 0 &&
+      guest2PortalDelegate.getEditorProxies().length === 0
+    ))
   })
 
   suite('tethering to other participants', () => {
