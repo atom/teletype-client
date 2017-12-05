@@ -211,6 +211,30 @@ suite('Portal', () => {
         guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
+
+    test('host gracefully handles guests switching to an editor that has already been destroyed', async () => {
+      const hostPeerPool = await buildPeerPool('host', server)
+      const guestPeerPool = await buildPeerPool('guest', server)
+      const hostPortal = await buildPortal('portal', hostPeerPool)
+      const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
+      await guestPortal.join()
+
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-1'))
+      const guestEditorProxy1 = guestPortal.testDelegate.editorProxyForURI('uri-1')
+
+      hostEditorProxy1.dispose()
+      guestPortal.activateEditorProxy(null)
+      guestPortal.activateEditorProxy(guestEditorProxy1)
+
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-2'))
+    })
   })
 
   async function buildPortal (portalId, peerPool, hostPeerId) {
