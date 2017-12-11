@@ -130,18 +130,18 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       // Don't notify guests when setting the active editor proxy to the same value it currently has.
-      hostPortal.setActiveEditorProxy(hostPortal.testDelegate.getActiveEditorProxy())
+      hostPortal.activateEditorProxy(hostPortal.testDelegate.getTetherEditorProxy())
 
       // Set the active editor proxy to a different value to ensure guests are notified only of this change.
       const originalBufferProxy = await hostPortal.createBufferProxy({uri: 'original-uri', text: ''})
       const originalEditorProxy = await hostPortal.createEditorProxy({bufferProxy: originalBufferProxy})
-      hostPortal.setActiveEditorProxy(originalEditorProxy)
+      hostPortal.activateEditorProxy(originalEditorProxy)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'original-uri' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'original-uri' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
 
@@ -151,18 +151,18 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       // Ensure no race condition occurs on the guest when fetching new editor
       // proxies for the first time and, at the same time, receiving a request
       // to switch to a previous value of active editor proxy.
       const newBufferProxy = await hostPortal.createBufferProxy({uri: 'new-uri', text: ''})
       const newEditorProxy = await hostPortal.createEditorProxy({bufferProxy: newBufferProxy})
-      hostPortal.setActiveEditorProxy(newEditorProxy)
-      hostPortal.setActiveEditorProxy(null)
+      hostPortal.activateEditorProxy(newEditorProxy)
+      hostPortal.activateEditorProxy(null)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === null &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 2
+        guestPortal.testDelegate.getTetherBufferProxyURI() === null &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 2
       ))
     })
 
@@ -172,20 +172,20 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       const bufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
       const editorProxy1 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy1})
       const bufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const editorProxy2 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy2})
 
-      hostPortal.setActiveEditorProxy(editorProxy1)
+      hostPortal.activateEditorProxy(editorProxy1)
       bufferProxy1.dispose()
-      hostPortal.setActiveEditorProxy(null)
-      hostPortal.setActiveEditorProxy(editorProxy2)
+      hostPortal.activateEditorProxy(null)
+      hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-2' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
     })
 
@@ -195,21 +195,45 @@ suite('Portal', () => {
       const hostPortal = await buildPortal('portal', hostPeerPool)
       const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
       await guestPortal.join()
-      guestPortal.testDelegate.activeEditorProxyChangeCount = 0
+      guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       const bufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
       const editorProxy1 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy1})
       const bufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const editorProxy2 = await hostPortal.createEditorProxy({bufferProxy: bufferProxy2})
 
-      hostPortal.setActiveEditorProxy(editorProxy1)
+      hostPortal.activateEditorProxy(editorProxy1)
       editorProxy1.dispose()
-      hostPortal.setActiveEditorProxy(null)
-      hostPortal.setActiveEditorProxy(editorProxy2)
+      hostPortal.activateEditorProxy(null)
+      hostPortal.activateEditorProxy(editorProxy2)
       await condition(() => (
-        guestPortal.testDelegate.getActiveBufferProxyURI() === 'uri-2' &&
-        guestPortal.testDelegate.activeEditorProxyChangeCount === 1
+        guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-2' &&
+        guestPortal.testDelegate.tetherEditorProxyChangeCount === 1
       ))
+    })
+
+    test('host gracefully handles guests switching to an editor that has already been destroyed', async () => {
+      const hostPeerPool = await buildPeerPool('host', server)
+      const guestPeerPool = await buildPeerPool('guest', server)
+      const hostPortal = await buildPortal('portal', hostPeerPool)
+      const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
+      await guestPortal.join()
+
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'uri-1', text: ''})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-1'))
+      const guestEditorProxy1 = guestPortal.testDelegate.editorProxyForURI('uri-1')
+
+      hostEditorProxy1.dispose()
+      guestPortal.activateEditorProxy(null)
+      guestPortal.activateEditorProxy(guestEditorProxy1)
+
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-2'))
     })
   })
 
@@ -218,7 +242,7 @@ suite('Portal', () => {
     const portal = new Portal({id: portalId, hostPeerId, siteId, peerPool})
     await portal.initialize()
     portal.testDelegate = new FakePortalDelegate()
-    portal.setDelegate(portal.testDelegate)
+    await portal.setDelegate(portal.testDelegate)
     return portal
   }
 })

@@ -68,13 +68,13 @@ suite('Client Integration', () => {
     const hostEditorDelegate = new FakeEditorDelegate()
     hostEditorProxy.setDelegate(hostEditorDelegate)
     assert(!hostEditorDelegate.getSelectionsForSiteId(1))
-    hostPortal.setActiveEditorProxy(hostEditorProxy)
+    hostPortal.activateEditorProxy(hostEditorProxy)
 
     const guestPortalDelegate = new FakePortalDelegate()
     const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
+    await guestPortal.setDelegate(guestPortalDelegate)
 
-    const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+    const guestEditorProxy = guestPortalDelegate.getTetherEditorProxy()
     const guestEditorDelegate = new FakeEditorDelegate()
     guestEditorProxy.setDelegate(guestEditorDelegate)
 
@@ -152,34 +152,125 @@ suite('Client Integration', () => {
     })
   })
 
-  test('switching a portal\'s active editor proxy', async () => {
+  test('adding and removing editor proxies', async () => {
     const host = await buildClient()
-    const guest = await buildClient()
-
     const hostPortal = await host.createPortal()
-    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
-    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {}})
-    hostPortal.setActiveEditorProxy(hostEditorProxy1)
 
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'buffer-a')
-    const guestEditorDelegate1 = guestPortalDelegate.getActiveEditorProxy()
+    const guest1 = await buildClient()
+    const guest1Portal = await guest1.joinPortal(hostPortal.id)
+    const guest1PortalDelegate = new FakePortalDelegate()
+    guest1Portal.setDelegate(guest1PortalDelegate)
+
+    assert.equal(guest1PortalDelegate.getEditorProxies().length, 0)
+
+    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+    hostPortal.activateEditorProxy(hostEditorProxy1)
+
+    await condition(() => guest1PortalDelegate.getEditorProxies().length === 1)
 
     const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
-    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {}})
-    hostPortal.setActiveEditorProxy(hostEditorProxy2)
-    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-b')
-    const guestEditorDelegate2 = guestPortalDelegate.getActiveEditorProxy()
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+    hostPortal.activateEditorProxy(hostEditorProxy2)
 
-    hostPortal.setActiveEditorProxy(hostEditorProxy1)
-    await condition(() => guestPortalDelegate.getActiveBufferProxyURI() === 'buffer-a')
-    assert.equal(guestPortalDelegate.getActiveEditorProxy(), guestEditorDelegate1)
+    await condition(() => guest1PortalDelegate.getEditorProxies().length === 2)
+
+    const guest2 = await buildClient()
+    const guest2Portal = await guest2.joinPortal(hostPortal.id)
+    const guest2PortalDelegate = new FakePortalDelegate()
+    guest2Portal.setDelegate(guest2PortalDelegate)
+
+    assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
+
+    hostPortal.removeEditorProxy(hostEditorProxy1)
+
+    await condition(() => (
+      guest1PortalDelegate.getEditorProxies().length === 1 &&
+      guest2PortalDelegate.getEditorProxies().length === 1
+    ))
+
+    hostPortal.removeEditorProxy(hostEditorProxy2)
+
+    await condition(() => (
+      guest1PortalDelegate.getEditorProxies().length === 0 &&
+      guest2PortalDelegate.getEditorProxies().length === 0
+    ))
   })
 
   suite('tethering to other participants', () => {
-    test('extending, retracting, and disconnecting', async () => {
+    test('extending, retracting, and disconnecting when collaborating across multiple editors', async () => {
+      const host = await buildClient()
+      const guest1 = await buildClient()
+
+      const hostPortal = await host.createPortal()
+      const hostPortalDelegate = new FakePortalDelegate()
+      hostPortal.setDelegate(hostPortalDelegate)
+
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-1', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      const guest1PortalDelegate = new FakePortalDelegate()
+      const guest1Portal = await guest1.joinPortal(hostPortal.id)
+      await guest1Portal.setDelegate(guest1PortalDelegate)
+      assert.equal(guest1Portal.resolveFollowState(), FollowState.RETRACTED)
+
+      // Extend the tether when the follower performs an action
+      const guest1EditorProxy1 = guest1PortalDelegate.getTetherEditorProxy()
+      guest1EditorProxy1.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guest1Portal.resolveFollowState() === FollowState.EXTENDED)
+
+      // Retract an extended tether if leader moves to a different editor and
+      // the tether disconnect window has elapsed since the last action taken by
+      // by the follower
+      await timeout(guest1Portal.tetherDisconnectWindow)
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-2', text: ('y'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+      await condition(() => (
+        guest1Portal.resolveFollowState() === FollowState.RETRACTED &&
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+      ))
+
+      // Disconnect an extended tether if leader moves to a different editor
+      // within the disconnect window.
+      const guest1EditorProxy2 = guest1PortalDelegate.getTetherEditorProxy()
+      guest1EditorProxy2.updateSelections({
+        1: {range: range([2, 1], [2, 1])}
+      }, {initialUpdate: true})
+
+      guest1EditorProxy2.bufferProxy.setTextInRange({row: 1, column: 1}, {row: 1, column: 1}, 'X')
+      await condition(() => guest1Portal.resolveFollowState() === FollowState.EXTENDED)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+      await condition(() => (
+        guest1Portal.resolveFollowState() === FollowState.DISCONNECTED &&
+        guest1PortalDelegate.getTetherBufferProxyURI() === 'buffer-2'
+      ))
+
+      // New guests can start following existing participants.
+      const guest2 = await buildClient()
+      const guest2PortalDelegate = new FakePortalDelegate()
+      const guest2Portal = await guest2.joinPortal(hostPortal.id)
+      await guest2Portal.setDelegate(guest2PortalDelegate)
+
+      guest2Portal.follow(guest1Portal.siteId)
+
+      assert.equal(guest2PortalDelegate.getTetherBufferProxyURI(), 'buffer-2')
+      assert.deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 2, column: 1})
+
+      // When you start to follow a participant, you go to their position in
+      // their active editor
+      hostPortal.follow(guest1Portal.siteId)
+      guest1EditorProxy2.updateSelections({
+        2: {range: {start: {row: 4, column: 4}, end: {row: 4, column: 4}}}
+      })
+      await condition(() => (
+        hostPortalDelegate.getTetherBufferProxyURI() === 'buffer-2' &&
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 4, column: 4})
+      ))
+    })
+
+    test('extending, retracting, and disconnecting when collaborating in a single editor', async () => {
       const host = await buildClient()
       const guest = await buildClient()
 
@@ -191,36 +282,36 @@ suite('Client Integration', () => {
           2: {range: {start: {row: 8, column: 8}, end: {row: 9, column: 9}}}
         }
       })
-      hostPortal.setActiveEditorProxy(hostEditorProxy)
+      hostPortal.activateEditorProxy(hostEditorProxy)
 
       const guestPortalDelegate = new FakePortalDelegate()
       const guestPortal = await guest.joinPortal(hostPortal.id)
-      guestPortal.setDelegate(guestPortalDelegate)
+      await guestPortal.setDelegate(guestPortalDelegate)
 
-      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
+      // Guests immediately jump to host's cursor position after joining.
+      assert.equal(guestPortal.resolveFollowState(), FollowState.RETRACTED)
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 9, column: 9})
+
+      const guestEditorProxy = guestPortalDelegate.getTetherEditorProxy()
       const guestEditorDelegate = new FakeEditorDelegate()
       guestEditorDelegate.updateViewport(5, 15)
       guestEditorProxy.setDelegate(guestEditorDelegate)
-
-      // Guests immediately jump to host's cursor position after joining.
-      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.RETRACTED)
-      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 9, column: 9})
 
       // Guests continue to follow host's cursor as it moves.
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 10, column: 10}, end: {row: 11, column: 11}}, reversed: true}
       })
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 10, column: 10}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 10, column: 10}))
 
       // Extend the tether when the guest explicitly moves their cursor
       guestEditorProxy.updateSelections({
         2: {range: {start: {row: 9, column: 9}, end: {row: 9, column: 9}}}
       })
-      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.EXTENDED)
+      assert.equal(guestPortal.resolveFollowState(), FollowState.EXTENDED)
 
       // When the tether is extended, the follower's cursor does not follow
       // the tether's position as long as it remains visible in the viewport
-      assert(guestEditorDelegate.isPositionVisible({row: 11, column: 11}))
+      assert(!guestEditorDelegate.isScrollNeededToViewPosition({row: 11, column: 11}))
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 11, column: 11}, end: {row: 11, column: 11}}}
       })
@@ -228,50 +319,50 @@ suite('Client Integration', () => {
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 11, column: 11}, end: {row: 11, column: 11}}
       ))
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 10, column: 10}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 10, column: 10}))
 
       // Moves out of the viewport will retract the tether so long as the
       // tether disconnect window has elapsed since the last cursor movement
       // by the follower
       await timeout(guestPortal.tetherDisconnectWindow)
-      assert(!guestEditorDelegate.isPositionVisible({row: 20, column: 20}))
+      assert(guestEditorDelegate.isScrollNeededToViewPosition({row: 20, column: 20}))
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 20, column: 20}, end: {row: 20, column: 20}}}
       })
-      await condition(() => guestEditorDelegate.getTetherState() === FollowState.RETRACTED)
-      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 20, column: 20})
+      await condition(() => guestPortalDelegate.getTetherState() === FollowState.RETRACTED)
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 20, column: 20})
 
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 21, column: 21}, end: {row: 21, column: 21}}}
       })
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 21}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 21, column: 21}))
 
       // Update delegate's tether position when text changes on remote sites.
       hostBufferProxy.setTextInRange({row: 21, column: 0}, {row: 21, column: 0}, 'X')
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 21, column: 22}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 21, column: 22}))
 
       // Extend the tether when the follower starts typing.
       guestEditorProxy.bufferProxy.setTextInRange({row: 21, column: 22}, {row: 21, column: 22}, 'ABCD')
-      assert.equal(guestEditorProxy.resolveFollowState(), FollowState.EXTENDED)
+      assert.equal(guestPortal.resolveFollowState(), FollowState.EXTENDED)
 
       // Disconnects the tether if leader moves offscreen within the disconnect window.
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
-      await condition(() => guestEditorDelegate.getTetherState() === FollowState.DISCONNECTED)
+      await condition(() => guestPortalDelegate.getTetherState() === FollowState.DISCONNECTED)
       assert.deepEqual(
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
       )
 
       // Can reconnect tether after disconnecting
-      guestEditorProxy.follow(1)
-      assert.equal(guestEditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      guestPortal.follow(1)
+      assert.equal(guestPortalDelegate.getTetherState(), FollowState.RETRACTED)
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 0, column: 0})
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 1, column: 1}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 1, column: 1}))
 
       // Disconnects the tether if it moves off screen within the disconnect
       // window of the follower moving their cursor
@@ -281,28 +372,28 @@ suite('Client Integration', () => {
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
-      await condition(() => guestEditorDelegate.getTetherState() === FollowState.DISCONNECTED)
+      await condition(() => guestPortalDelegate.getTetherState() === FollowState.DISCONNECTED)
       assert.deepEqual(
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
       )
 
       // Can reconnect tether after disconnecting
-      guestEditorProxy.follow(1)
-      assert.equal(guestEditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      guestPortal.follow(1)
+      assert.equal(guestPortalDelegate.getTetherState(), FollowState.RETRACTED)
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 0, column: 0})
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
-      await condition(() => deepEqual(guestEditorDelegate.getTetherPosition(), {row: 1, column: 1}))
+      await condition(() => deepEqual(guestPortalDelegate.getTetherPosition(), {row: 1, column: 1}))
 
       // Disconnect tether when we scroll out of view. In real life, the
       // viewport would have changed when we reconnected the tether, but in
       // this test we're only concerned with the tether position being out of
       // view when we indicate a scroll.
-      assert(!guestEditorDelegate.isPositionVisible({row: 1, column: 1}))
+      assert(guestEditorDelegate.isScrollNeededToViewPosition({row: 1, column: 1}))
       guestEditorProxy.didScroll()
-      assert.equal(guestEditorDelegate.getTetherState(), FollowState.DISCONNECTED)
+      assert.equal(guestPortalDelegate.getTetherState(), FollowState.DISCONNECTED)
       hostEditorProxy.updateSelections({
         2: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
@@ -310,67 +401,110 @@ suite('Client Integration', () => {
         guestEditorDelegate.getSelectionsForSiteId(1)[2].range,
         {start: {row: 0, column: 0}, end: {row: 0, column: 0}}
       ))
-      assert.notDeepEqual(guestEditorDelegate.getTetherPosition(), {row: 0, column: 0})
+      assert.notDeepEqual(guestPortalDelegate.getTetherPosition(), {row: 0, column: 0})
     })
 
-    test('showing and hiding selections when tether states change', async () => {
+    test('showing and hiding selections', async () => {
       const host = await buildClient()
       const hostPortal = await host.createPortal()
-      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ('x'.repeat(30) + '\n').repeat(30)})
-      const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1, selections: {
         1: {range: {start: {row: 5, column: 5}, end: {row: 6, column: 6}}}
       }})
-      const hostEditorDelegate = new FakeEditorDelegate()
-      hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.setActiveEditorProxy(hostEditorProxy)
+      const hostEditor1Delegate = new FakeEditorDelegate()
+      hostEditorProxy1.setDelegate(hostEditor1Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
 
       const guest = await buildClient()
       const guestPortalDelegate = new FakePortalDelegate()
       const guestPortal = await guest.joinPortal(hostPortal.id)
-      guestPortal.setDelegate(guestPortalDelegate)
-      const guestEditorProxy = guestPortalDelegate.getActiveEditorProxy()
-      const guestEditorDelegate = new FakeEditorDelegate()
-      guestEditorProxy.setDelegate(guestEditorDelegate)
-      guestEditorProxy.updateSelections({
-        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
-      }, true)
+      await guestPortal.setDelegate(guestPortalDelegate)
 
-      assert.deepEqual(guestEditorDelegate.getTetherPosition(), {row: 6, column: 6})
+      const guestEditor1Proxy = guestPortalDelegate.getTetherEditorProxy()
+      const guestEditor1Delegate = new FakeEditorDelegate()
+      guestEditor1Proxy.setDelegate(guestEditor1Delegate)
+      guestEditor1Proxy.updateSelections({
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      }, {initialUpdate: true})
+
+      assert.deepEqual(guestPortalDelegate.getTetherPosition(), {row: 6, column: 6})
 
       // Cursors are not rendered locally or remotely for followers with
       // retracted tethers
-      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+      await condition(() => deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}))
 
       // When the tether is extended, selections appear
-      guestEditorProxy.updateSelections({
+      guestEditor1Proxy.updateSelections({
         1: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return selection && deepEqual(selection.range, {start: {row: 1, column: 1}, end: {row: 1, column: 1}})
       })
 
       // Selections disappear when the tether is retracted again
-      await timeout(guestEditorProxy.tetherDisconnectWindow)
-      guestEditorDelegate.updateViewport(0, 6)
-      hostEditorProxy.updateSelections({
+      await timeout(guestPortal.tetherDisconnectWindow)
+      guestEditor1Delegate.updateViewport(0, 6)
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
-      await condition(() => deepEqual(guestEditorProxy.resolveLeaderPosition(), {row: 12, column: 12}))
-      await condition(() => deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}))
+      await condition(() => deepEqual(guestPortal.resolveLeaderPosition(), {row: 12, column: 12}))
+      await condition(() => deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}))
 
       // Disconnecting the tether shows the selections again
-      guestEditorDelegate.updateViewport(6, 15)
-      guestEditorProxy.updateSelections({
+      guestEditor1Delegate.updateViewport(6, 15)
+      guestEditor1Proxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      hostEditorProxy.updateSelections({
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}})
       })
+
+      // Activating an editor proxy hides selection on the previously active
+      // editor proxy and shows them on the new one.
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2, selections: {
+        1: {range: {start: {row: 1, column: 3}, end: {row: 2, column: 4}}}
+      }})
+      const hostEditor2Delegate = new FakeEditorDelegate()
+      hostEditorProxy2.setDelegate(hostEditor2Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+
+      await condition(() => guestPortalDelegate.getEditorProxies().length === 2)
+
+      const guestEditor2Proxy = guestPortalDelegate.editorProxyForURI('buffer-b')
+      const guestEditor2Delegate = new FakeEditorDelegate()
+      guestEditor2Proxy.setDelegate(guestEditor2Delegate)
+      guestEditor2Proxy.updateSelections({
+        1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
+      }, {initialUpdate: true})
+
+      await condition(() => (
+        deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {}) &&
+        !deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1), {})
+      ))
+
+      hostPortal.activateEditorProxy(hostEditorProxy1)
+
+      await condition(() => (
+        !deepEqual(guestEditor1Delegate.getSelectionsForSiteId(1), {}) &&
+        deepEqual(guestEditor2Delegate.getSelectionsForSiteId(1), {})
+      ))
+
+      // Retracting the tether when the leader is on a different editor proxy hides follower selections.
+      assert.notDeepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {})
+      assert.deepEqual(hostEditor2Delegate.getSelectionsForSiteId(2), {})
+
+      guestPortal.follow(1)
+
+      await condition(() => (
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor2Delegate.getSelectionsForSiteId(2), {})
+      ))
     })
 
     test('transitive tethering (without cycles)', async () => {
@@ -379,71 +513,71 @@ suite('Client Integration', () => {
       const guest2 = await buildClient()
 
       const hostPortal = await host.createPortal()
-      const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
-      const hostEditorProxy = await hostPortal.createEditorProxy({
-        bufferProxy: hostBufferProxy,
+      const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy1 = await hostPortal.createEditorProxy({
+        bufferProxy: hostBufferProxy1,
         selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
       })
-      const hostEditorDelegate = new FakeEditorDelegate()
-      hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.setActiveEditorProxy(hostEditorProxy)
+      const hostEditor1Delegate = new FakeEditorDelegate()
+      hostEditorProxy1.setDelegate(hostEditor1Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy1)
 
       const guest1PortalDelegate = new FakePortalDelegate()
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
-      guest1Portal.setDelegate(guest1PortalDelegate)
+      await guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
-      const guest1EditorDelegate = new FakeEditorDelegate()
-      guest1EditorDelegate.updateViewport(5, 15)
-      guest1EditorProxy.setDelegate(guest1EditorDelegate)
+      const guest1Editor1Proxy = guest1PortalDelegate.getTetherEditorProxy()
+      const guest1Editor1Delegate = new FakeEditorDelegate()
+      guest1Editor1Delegate.updateViewport(5, 15)
+      guest1Editor1Proxy.setDelegate(guest1Editor1Delegate)
 
       const guest2PortalDelegate = new FakePortalDelegate()
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
-      guest2Portal.setDelegate(guest2PortalDelegate)
+      await guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
-      const guest2EditorDelegate = new FakeEditorDelegate()
-      guest2EditorDelegate.updateViewport(5, 15)
-      guest2EditorProxy.setDelegate(guest2EditorDelegate)
+      const guest2Editor1Proxy = guest2PortalDelegate.getTetherEditorProxy()
+      const guest2Editor1Delegate = new FakeEditorDelegate()
+      guest2Editor1Delegate.updateViewport(5, 15)
+      guest2Editor1Proxy.setDelegate(guest2Editor1Delegate)
 
       // Guest1 follows the host, and Guest2 follows Guest1. This has the effect
       // of making Guest2 follow the host.
-      guest1EditorProxy.follow(hostPortal.siteId)
-      guest2EditorProxy.follow(guest1Portal.siteId)
-      hostEditorProxy.updateSelections({
+      guest1Portal.follow(hostPortal.siteId)
+      guest2Portal.follow(guest1Portal.siteId)
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 12, column: 12}, end: {row: 12, column: 12}}}
       })
       await condition(() => (
-        deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 12, column: 12}) &&
-        deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 12, column: 12}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 12, column: 12}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 12, column: 12}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
       ))
 
       // When tether is extended on Guest1, Guest2 momentarily stops following the host.
-      guest1EditorProxy.updateSelections({
+      guest1Editor1Proxy.updateSelections({
         1: {range: {start: {row: 1, column: 1}, end: {row: 1, column: 1}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(2)[1]
+        const selection = hostEditor1Delegate.getSelectionsForSiteId(2)[1]
         return (
           selection && deepEqual(selection.range, {start: {row: 1, column: 1}, end: {row: 1, column: 1}}) &&
-          deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 1, column: 1}) &&
-          deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+          deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 1, column: 1}) &&
+          deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
         )
       })
 
       // When tether is retracted on Guest1, Guest2 goes back to following the host.
-      await timeout(guest1EditorProxy.tetherDisconnectWindow)
-      guest1EditorDelegate.updateViewport(0, 6)
-      hostEditorProxy.updateSelections({
+      await timeout(guest1Portal.tetherDisconnectWindow)
+      guest1Editor1Delegate.updateViewport(0, 6)
+      hostEditorProxy1.updateSelections({
         1: {range: {start: {row: 8, column: 0}, end: {row: 8, column: 0}}}
       })
       await condition(() => (
-        deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(2), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(2), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(3), {})
       ))
 
       // Ensure transitive following works for new sites that join after
@@ -451,37 +585,60 @@ suite('Client Integration', () => {
       const guest3 = await buildClient()
       const guest3PortalDelegate = new FakePortalDelegate()
       const guest3Portal = await guest3.joinPortal(hostPortal.id)
-      guest3Portal.setDelegate(guest3PortalDelegate)
+      await guest3Portal.setDelegate(guest3PortalDelegate)
 
-      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3EditorProxy = guest3PortalDelegate.getTetherEditorProxy()
       const guest3EditorDelegate = new FakeEditorDelegate()
       guest3EditorDelegate.updateViewport(5, 15)
       guest3EditorProxy.setDelegate(guest3EditorDelegate)
 
-      guest3EditorProxy.follow(guest2Portal.siteId)
+      guest3Portal.follow(guest2Portal.siteId)
       await condition(() => (
-        deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(guest3EditorDelegate.getTetherPosition(), {row: 8, column: 0}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
-        deepEqual(hostEditorDelegate.getSelectionsForSiteId(guest3Portal.siteId), {})
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(guest3PortalDelegate.getTetherPosition(), {row: 8, column: 0}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest3Portal.siteId), {})
+      ))
+
+      // Ensure transitive following works when activating other editor proxies.
+      const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+      const hostEditorProxy2 = await hostPortal.createEditorProxy({
+        bufferProxy: hostBufferProxy2,
+        selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
+      })
+      const hostEditor2Delegate = new FakeEditorDelegate()
+      hostEditorProxy2.setDelegate(hostEditor2Delegate)
+      hostPortal.activateEditorProxy(hostEditorProxy2)
+
+      await condition(() => (
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest3PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest1Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest2Portal.siteId), {}) &&
+        deepEqual(hostEditor1Delegate.getSelectionsForSiteId(guest3Portal.siteId), {})
       ))
 
       // Disconnecting the tether on Guest1 breaks transitivity.
-      guest1EditorDelegate.updateViewport(6, 15)
-      guest1EditorProxy.updateSelections({
+      const guest1Editor2Proxy = guest1PortalDelegate.getTetherEditorProxy()
+      const guest1Editor2Delegate = new FakeEditorDelegate()
+      guest1Editor2Delegate.updateViewport(6, 15)
+      guest1Editor2Proxy.setDelegate(guest1Editor2Delegate)
+
+      guest1Editor2Proxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      hostEditorProxy.updateSelections({
+      hostEditorProxy2.updateSelections({
         1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}
       })
       await condition(() => {
-        const selection = hostEditorDelegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
+        const selection = hostEditor2Delegate.getSelectionsForSiteId(guest1Portal.siteId)[1]
         return (
           selection && deepEqual(selection.range, {start: {row: 13, column: 13}, end: {row: 13, column: 13}}) &&
-          deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13}) &&
-          deepEqual(hostEditorDelegate.getSelectionsForSiteId(3), {})
+          deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
+          deepEqual(hostEditor2Delegate.getSelectionsForSiteId(3), {})
         )
       })
     })
@@ -492,6 +649,9 @@ suite('Client Integration', () => {
       const guest2 = await buildClient()
 
       const hostPortal = await host.createPortal()
+      const hostPortalDelegate = new FakePortalDelegate()
+      hostPortal.setDelegate(hostPortalDelegate)
+
       const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
       const hostEditorProxy = await hostPortal.createEditorProxy({
         bufferProxy: hostBufferProxy,
@@ -499,28 +659,28 @@ suite('Client Integration', () => {
       })
       const hostEditorDelegate = new FakeEditorDelegate()
       hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.setActiveEditorProxy(hostEditorProxy)
+      hostPortal.activateEditorProxy(hostEditorProxy)
 
       const guest1PortalDelegate = new FakePortalDelegate()
       const guest1Portal = await guest1.joinPortal(hostPortal.id)
-      guest1Portal.setDelegate(guest1PortalDelegate)
+      await guest1Portal.setDelegate(guest1PortalDelegate)
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1EditorDelegate = new FakeEditorDelegate()
       guest1EditorDelegate.updateViewport(5, 15)
       guest1EditorProxy.setDelegate(guest1EditorDelegate)
 
       const guest2PortalDelegate = new FakePortalDelegate()
       const guest2Portal = await guest2.joinPortal(hostPortal.id)
-      guest2Portal.setDelegate(guest2PortalDelegate)
+      await guest2Portal.setDelegate(guest2PortalDelegate)
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
       const guest2EditorDelegate = new FakeEditorDelegate()
       guest2EditorDelegate.updateViewport(5, 15)
       guest2EditorProxy.setDelegate(guest2EditorDelegate)
 
       // Disconnect guest1's tether.
-      guest1EditorProxy.unfollow()
+      guest1Portal.unfollow()
       guest1EditorProxy.updateSelections({1: {range: range([0, 0], [0, 0])}})
 
       await condition(() => {
@@ -534,51 +694,45 @@ suite('Client Integration', () => {
 
       // Form a cycle (guest1 -> guest2 -> host -> guest1) and ensure it gets
       // broken on the site with the lowest site id.
-      guest1EditorProxy.follow(guest2Portal.siteId)
-      guest2EditorProxy.follow(hostPortal.siteId)
-      hostEditorProxy.follow(guest1Portal.siteId)
+      guest1Portal.follow(guest2Portal.siteId)
+      guest2Portal.follow(hostPortal.siteId)
+      hostPortal.follow(guest1Portal.siteId)
 
       await condition(() => (
-        hostEditorProxy.resolveLeaderSiteId() == hostPortal.siteId &&
-        guest1EditorProxy.resolveLeaderSiteId() === hostPortal.siteId &&
-        guest2EditorProxy.resolveLeaderSiteId() === hostPortal.siteId
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 5, column: 5}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 5, column: 5})
       ))
 
-      assert.equal(hostEditorProxy.getFollowedSiteId(), null)
-      assert.equal(hostEditorDelegate.getTetherState(), FollowState.DISCONNECTED)
-      assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 5, column: 5})
+      assert.equal(hostPortal.getFollowedSiteId(), null)
+      assert.equal(hostPortalDelegate.getTetherState(), FollowState.DISCONNECTED)
 
-      assert.equal(guest1EditorProxy.getFollowedSiteId(), guest2Portal.siteId)
-      assert.equal(guest1EditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 5, column: 5})
+      assert.equal(guest1Portal.getFollowedSiteId(), guest2Portal.siteId)
+      assert.equal(guest1PortalDelegate.getTetherState(), FollowState.RETRACTED)
 
-      assert.equal(guest2EditorProxy.getFollowedSiteId(), hostPortal.siteId)
-      assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 5, column: 5})
+      assert.equal(guest2Portal.getFollowedSiteId(), hostPortal.siteId)
+      assert.equal(guest2PortalDelegate.getTetherState(), FollowState.RETRACTED)
 
       // The site which breaks the cycle becomes the leader.
       guest1EditorProxy.updateSelections({
         1: {range: {start: {row: 13, column: 13}, end: {row: 13, column: 13}}}
       })
-      guest1EditorProxy.unfollow()
+      guest1Portal.unfollow()
 
       await condition(() => (
-        hostEditorProxy.resolveLeaderSiteId() === guest1Portal.siteId &&
-        guest1EditorProxy.resolveLeaderSiteId() == guest1Portal.siteId &&
-        guest2EditorProxy.resolveLeaderSiteId() === guest1Portal.siteId
+        deepEqual(hostPortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
+        deepEqual(guest1PortalDelegate.getTetherPosition(), {row: 13, column: 13}) &&
+        deepEqual(guest2PortalDelegate.getTetherPosition(), {row: 13, column: 13})
       ))
 
-      assert.equal(hostEditorProxy.getFollowedSiteId(), guest1Portal.siteId)
-      assert.equal(hostEditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(hostEditorDelegate.getTetherPosition(), {row: 13, column: 13})
+      assert.equal(hostPortal.getFollowedSiteId(), guest1Portal.siteId)
+      assert.equal(hostPortalDelegate.getTetherState(), FollowState.RETRACTED)
 
-      assert.equal(guest1EditorProxy.getFollowedSiteId(), null)
-      assert.equal(guest1EditorDelegate.getTetherState(), FollowState.DISCONNECTED)
-      assert.deepEqual(guest1EditorDelegate.getTetherPosition(), {row: 13, column: 13})
+      assert.equal(guest1Portal.getFollowedSiteId(), null)
+      assert.equal(guest1PortalDelegate.getTetherState(), FollowState.DISCONNECTED)
 
-      assert.equal(guest2EditorProxy.getFollowedSiteId(), hostPortal.siteId)
-      assert.equal(guest2EditorDelegate.getTetherState(), FollowState.RETRACTED)
-      assert.deepEqual(guest2EditorDelegate.getTetherPosition(), {row: 13, column: 13})
+      assert.equal(guest2Portal.getFollowedSiteId(), hostPortal.siteId)
+      assert.equal(guest2PortalDelegate.getTetherState(), FollowState.RETRACTED)
     })
   })
 
@@ -587,102 +741,104 @@ suite('Client Integration', () => {
     const guest1 = await buildClient()
     const guest2 = await buildClient()
 
+    const portals = []
+
     const hostPortal = await host.createPortal()
-    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-uri', text: ('x'.repeat(30) + '\n').repeat(30)})
-    const hostEditorProxy = await hostPortal.createEditorProxy({
-      bufferProxy: hostBufferProxy,
+    const hostPortalDelegate = new FakePortalDelegate()
+    hostPortal.setDelegate(hostPortalDelegate)
+    portals.push(hostPortal)
+
+    const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ('x'.repeat(30) + '\n').repeat(30)})
+    const hostEditorProxy1 = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy1,
       selections: {1: {range: {start: {row: 5, column: 5}, end: {row: 5, column: 5}}}}
     })
-    const hostEditorDelegate = new FakeEditorDelegate()
-    hostEditorProxy.setDelegate(hostEditorDelegate)
-    hostPortal.setActiveEditorProxy(hostEditorProxy)
+    hostPortal.activateEditorProxy(hostEditorProxy1)
 
     const guest1PortalDelegate = new FakePortalDelegate()
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
-    guest1Portal.setDelegate(guest1PortalDelegate)
-
-    const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
-    const guest1EditorDelegate = new FakeEditorDelegate()
-    guest1EditorProxy.setDelegate(guest1EditorDelegate)
+    await guest1Portal.setDelegate(guest1PortalDelegate)
+    portals.push(guest1Portal)
 
     const guest2PortalDelegate = new FakePortalDelegate()
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
-    guest2Portal.setDelegate(guest2PortalDelegate)
+    await guest2Portal.setDelegate(guest2PortalDelegate)
+    portals.push(guest2Portal)
 
-    const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
-    const guest2EditorDelegate = new FakeEditorDelegate()
-    guest2EditorProxy.setDelegate(guest2EditorDelegate)
-
-    hostEditorProxy.updateSelections({
+    // Update active positions after the leader updates its selections.
+    hostEditorProxy1.updateSelections({
       1: {range: range([5, 4], [9, 6])},
       2: {range: range([2, 7], [4, 4])}
     })
 
-    await condition(() => (
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 4)) &&
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 4)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 4)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 4)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 4))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 4)}
+    ])
 
-    hostBufferProxy.setTextInRange(point(4, 0), point(4, 0), 'X')
+    // Update active positions after a text change.
+    hostBufferProxy1.setTextInRange(point(4, 0), point(4, 0), 'X')
 
-    await condition(() => (
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 5)) &&
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 5)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(4, 5)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(4, 5))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 5)}
+    ])
 
-    guest1EditorProxy.updateSelections({
+    // Update active positions after the leader changes.
+    guest1PortalDelegate.getTetherEditorProxy().updateSelections({
       1: {range: range([5, 4], [9, 6]), reversed: true}
     })
-    guest2EditorProxy.follow(guest1EditorProxy.siteId)
+    guest2Portal.follow(guest1Portal.siteId)
 
-    await condition(() => (
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5)) &&
-      deepEqual(guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(guest1EditorProxy.siteId), point(5, 4)) &&
-      deepEqual(guest2EditorDelegate.activePositionForSiteId(hostEditorProxy.siteId), point(4, 5))
-    ))
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+    ])
+
+    // Update active positions after host switches to a different editor proxy.
+    const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ('x'.repeat(30) + '\n').repeat(30)})
+    const hostEditorProxy2 = await hostPortal.createEditorProxy({
+      bufferProxy: hostBufferProxy2,
+      selections: {1: {range: {start: {row: 2, column: 2}, end: {row: 2, column: 2}}}}
+    })
+    hostPortal.activateEditorProxy(hostEditorProxy2)
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+    ])
+
+    // Update active positions after a guest switches to a different editor proxy.
+    const guest1EditorProxy2 = guest1PortalDelegate.editorProxyForURI('buffer-b')
+    guest1Portal.activateEditorProxy(guest1EditorProxy2)
+    guest1EditorProxy2.updateSelections({
+      1: {range: range([1, 0], [1, 0])}
+    }, {initialUpdate: true})
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)},
+      {siteId: 3, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+    ])
 
     // Update active positions after a site disconnects.
     guest2Portal.dispose()
-    await condition(() => (
-      !hostEditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId) &&
-      !guest1EditorDelegate.activePositionForSiteId(guest2EditorProxy.siteId)
-    ))
-  })
 
-  test('closing a portal\'s active editor proxy', async () => {
-    const host = await buildClient()
-    const guest = await buildClient()
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+    ])
 
-    const hostPortal = await host.createPortal()
-    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: ''})
-    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
-
-    const guestPortalDelegate = new FakePortalDelegate()
-    const guestPortal = await guest.joinPortal(hostPortal.id)
-    guestPortal.setDelegate(guestPortalDelegate)
-    assert(guestPortalDelegate.getActiveEditorProxy() === null)
-
-    hostPortal.setActiveEditorProxy(hostEditorProxy)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
-
-    hostPortal.setActiveEditorProxy(null)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() == null)
-
-    hostPortal.setActiveEditorProxy(hostEditorProxy)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    assert.equal(guestPortalDelegate.getActiveBufferProxyURI(), 'some-buffer')
+    function assertActivePositions (expectedPositions) {
+      const alivePortals = portals.filter((p) => !p.disposed)
+      return condition(() =>
+        alivePortals.every((p) => deepEqual(p.delegate.getActivePositions(), expectedPositions))
+      )
+    }
   })
 
   test('disposing editor and buffer proxies', async () => {
@@ -697,18 +853,18 @@ suite('Client Integration', () => {
     const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
     hostEditorProxy2.setDelegate(new FakeEditorDelegate())
 
-    hostPortal.setActiveEditorProxy(hostEditorProxy1)
+    hostPortal.activateEditorProxy(hostEditorProxy1)
 
     const guestPortal = await guest.joinPortal(hostPortal.id)
     const guestPortalDelegate = new FakePortalDelegate()
-    guestPortal.setDelegate(guestPortalDelegate)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() != null)
-    const guestEditorProxy1 = guestPortalDelegate.getActiveEditorProxy()
+    await guestPortal.setDelegate(guestPortalDelegate)
+    await condition(() => guestPortalDelegate.getTetherEditorProxy() != null)
+    const guestEditorProxy1 = guestPortalDelegate.getTetherEditorProxy()
     guestEditorProxy1.setDelegate(new FakeEditorDelegate())
 
-    hostPortal.setActiveEditorProxy(hostEditorProxy2)
-    await condition(() => guestPortalDelegate.getActiveEditorProxy() !== guestEditorProxy1)
-    const guestEditorProxy2 = guestPortalDelegate.getActiveEditorProxy()
+    hostPortal.activateEditorProxy(hostEditorProxy2)
+    await condition(() => guestPortalDelegate.getTetherEditorProxy() !== guestEditorProxy1)
+    const guestEditorProxy2 = guestPortalDelegate.getTetherEditorProxy()
     guestEditorProxy2.setDelegate(new FakeEditorDelegate())
 
     assert.equal(guestEditorProxy1.bufferProxy, guestEditorProxy2.bufferProxy)
@@ -742,17 +898,17 @@ suite('Client Integration', () => {
       const guest1 = await buildClient()
       guest1PortalDelegate = new FakePortalDelegate()
       guest1Portal = await guest1.joinPortal(hostPortal.id)
-      guest1Portal.setDelegate(guest1PortalDelegate)
+      await guest1Portal.setDelegate(guest1PortalDelegate)
 
       const guest2 = await buildClient()
       guest2PortalDelegate = new FakePortalDelegate()
       guest2Portal = await guest2.joinPortal(hostPortal.id)
-      guest2Portal.setDelegate(guest2PortalDelegate)
+      await guest2Portal.setDelegate(guest2PortalDelegate)
 
       const guest3 = await buildClient()
       guest3PortalDelegate = new FakePortalDelegate()
       guest3Portal = await guest3.joinPortal(hostPortal.id)
-      guest3Portal.setDelegate(guest3PortalDelegate)
+      await guest3Portal.setDelegate(guest3PortalDelegate)
 
       const hostBufferDelegate = new FakeBufferDelegate('')
       const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'some-buffer', text: hostBufferDelegate.text})
@@ -761,15 +917,15 @@ suite('Client Integration', () => {
       const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
       hostEditorDelegate = new FakeEditorDelegate()
       hostEditorProxy.setDelegate(hostEditorDelegate)
-      hostPortal.setActiveEditorProxy(hostEditorProxy)
+      hostPortal.activateEditorProxy(hostEditorProxy)
 
       await condition(() =>
-        guest1PortalDelegate.getActiveEditorProxy() != null &&
-        guest2PortalDelegate.getActiveEditorProxy() != null &&
-        guest3PortalDelegate.getActiveEditorProxy() != null
+        guest1PortalDelegate.getTetherEditorProxy() != null &&
+        guest2PortalDelegate.getTetherEditorProxy() != null &&
+        guest3PortalDelegate.getTetherEditorProxy() != null
       )
 
-      const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+      const guest1EditorProxy = guest1PortalDelegate.getTetherEditorProxy()
       const guest1BufferProxy = guest1EditorProxy.bufferProxy
       const guest1BufferDelegate = new FakeBufferDelegate()
       guest1BufferProxy.setDelegate(guest1BufferDelegate)
@@ -779,7 +935,7 @@ suite('Client Integration', () => {
         {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
       )
 
-      const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+      const guest2EditorProxy = guest2PortalDelegate.getTetherEditorProxy()
       const guest2BufferProxy = guest2EditorProxy.bufferProxy
       const guest2BufferDelegate = new FakeBufferDelegate()
       guest2BufferProxy.setDelegate(guest2BufferDelegate)
@@ -789,7 +945,7 @@ suite('Client Integration', () => {
         {1: {range: {start: {row: 0, column: 0}, end: {row: 0, column: 0}}}}
       )
 
-      const guest3EditorProxy = guest3PortalDelegate.getActiveEditorProxy()
+      const guest3EditorProxy = guest3PortalDelegate.getTetherEditorProxy()
       const guest3BufferProxy = guest3EditorProxy.bufferProxy
       const guest3BufferDelegate = new FakeBufferDelegate()
       guest3BufferProxy.setDelegate(guest3BufferDelegate)
@@ -867,23 +1023,23 @@ suite('Client Integration', () => {
     const client1HostPortal = await client1.createPortal()
     const client1BufferProxy = await client1HostPortal.createBufferProxy({uri: 'client-1-buffer', text: ''})
     const client1EditorProxy = await client1HostPortal.createEditorProxy({bufferProxy: client1BufferProxy, selections: {}})
-    client1HostPortal.setActiveEditorProxy(client1EditorProxy)
+    client1HostPortal.activateEditorProxy(client1EditorProxy)
 
     const client2GuestPortalDelegate = new FakePortalDelegate()
     const client2GuestPortal = await client2.joinPortal(client1HostPortal.id)
-    client2GuestPortal.setDelegate(client2GuestPortalDelegate)
-    assert.equal(client2GuestPortalDelegate.getActiveBufferProxyURI(), 'client-1-buffer')
+    await client2GuestPortal.setDelegate(client2GuestPortalDelegate)
+    assert.equal(client2GuestPortalDelegate.getTetherBufferProxyURI(), 'client-1-buffer')
 
     // while still participating as a guest in the portal above, client2 hosts a portal with client1 as a guest
     const client2HostPortal = await client2.createPortal()
     const client2BufferProxy = await client2HostPortal.createBufferProxy({uri: 'client-2-buffer', text: ''})
     const client2EditorProxy = await client2HostPortal.createEditorProxy({bufferProxy: client2BufferProxy, selections: {}})
-    client2HostPortal.setActiveEditorProxy(client2EditorProxy)
+    client2HostPortal.activateEditorProxy(client2EditorProxy)
 
     const client1GuestPortalDelegate = new FakePortalDelegate()
     const client1GuestPortal = await client1.joinPortal(client2HostPortal.id)
-    client1GuestPortal.setDelegate(client1GuestPortalDelegate)
-    assert.equal(client1GuestPortalDelegate.getActiveBufferProxyURI(), 'client-2-buffer')
+    await client1GuestPortal.setDelegate(client1GuestPortalDelegate)
+    assert.equal(client1GuestPortalDelegate.getTetherBufferProxyURI(), 'client-2-buffer')
   })
 
   test('attempting to join a non-existent portal', async () => {

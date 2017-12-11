@@ -4,7 +4,6 @@ module.exports =
 class Editor {
   constructor () {
     this.selectionsBySiteId = {}
-    this.activePositionsBySiteId = {}
   }
 
   dispose () {
@@ -19,21 +18,15 @@ class Editor {
     this.viewport = {startRow, endRow}
   }
 
-  isPositionVisible ({row}) {
+  isScrollNeededToViewPosition (position) {
+    assert(position && position.row != null && position.column != null)
+
     if (this.viewport) {
-      const {startRow, endRow} = this.viewport
-      return startRow <= row && row <= endRow
+      const {row} = position
+      return row < this.viewport.startRow || row > this.viewport.endRow
     } else {
       return false
     }
-  }
-
-  activePositionForSiteId (siteId) {
-    return this.activePositionsBySiteId[siteId]
-  }
-
-  updateActivePositions (activePositionsBySiteId) {
-    this.activePositionsBySiteId = activePositionsBySiteId
   }
 
   getSelectionsForSiteId (siteId) {
@@ -62,18 +55,5 @@ class Editor {
 
   clearSelectionsForSiteId (siteId) {
     delete this.selectionsBySiteId[siteId]
-  }
-
-  updateTether (state, position) {
-    this.tetherState = state
-    this.tetherPosition = position
-  }
-
-  getTetherState () {
-    return this.tetherState
-  }
-
-  getTetherPosition () {
-    return this.tetherPosition
   }
 }

@@ -4,14 +4,20 @@ import "teletype-crdt.proto";
 
 message PortalSubscriptionResponse {
   map<string, uint32> site_ids_by_peer_id = 1;
-  EditorProxy active_editor_proxy = 2;
-  BufferProxy active_buffer_proxy = 3;
+  reserved 2; // active_editor_proxy field is no longer supported
+  reserved 3; // active_buffer_proxy field is no longer supported
+  repeated Tether tethers = 4;
+  repeated BufferProxy active_buffer_proxies = 5;
+  repeated EditorProxy active_editor_proxies = 6;
+  map<uint32, uint32> active_editor_proxy_ids_by_site_id = 7;
 }
 
 message PortalUpdate {
   oneof variant {
     EditorProxySwitch editor_proxy_switch = 1;
     SiteAssignment site_assignment = 2;
+    EditorProxyRemoval editor_proxy_removal = 3;
+    Tether tether_update = 4;
   }
 
   message EditorProxySwitch {
@@ -23,34 +29,33 @@ message PortalUpdate {
     string peer_id = 1;
     uint32 site_id = 2;
   }
+
+  message EditorProxyRemoval {
+    uint32 editor_proxy_id = 1;
+  }
+}
+
+message Tether {
+  uint32 follower_site_id = 1;
+  uint32 leader_site_id = 2;
+  uint32 state = 3;
 }
 
 message EditorProxy {
   uint32 id = 1;
   uint32 buffer_proxy_id = 2;
   map<uint32, uint32> selection_layer_ids_by_site_id = 3;
-  map<uint32, Tether> tethers_by_follower_id = 4;
-
-  message Tether {
-    uint32 leader_site_id = 1;
-    uint32 state = 2;
-  }
+  reserved 4; // tethers_by_follower_id field is no longer supported
 }
 
 message EditorProxyUpdate {
   oneof variant {
     SelectionsUpdate selections_update = 1;
-    TetherUpdate tether_update = 2;
+    reserved 2; tether_update variant is no longer supported
   }
 
   message SelectionsUpdate {
     map<uint32, uint32> selection_layer_ids_by_site_id = 1;
-  }
-
-  message TetherUpdate {
-    uint32 follower_site_id = 1;
-    uint32 leader_site_id = 2;
-    uint32 state = 3;
   }
 }
 
