@@ -729,6 +729,37 @@ suite('Client Integration', () => {
     await condition(() => guestBufferProxy.delegate.isDisposed())
   })
 
+  test('save requests', async () => {
+    const host = await buildClient()
+    const hostPortal = await host.createPortal()
+
+    const hostBufferProxy = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
+    const hostBufferDelegate = new FakeBufferDelegate('')
+    hostBufferProxy.setDelegate(hostBufferDelegate)
+
+    const hostEditorProxy = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy, selections: {}})
+    hostPortal.setActiveEditorProxy(hostEditorProxy)
+
+    const guest1 = await buildClient()
+    const guest1PortalDelegate = new FakePortalDelegate()
+    const guest1Portal = await guest1.joinPortal(hostPortal.id)
+    guest1Portal.setDelegate(guest1PortalDelegate)
+    const guest1EditorProxy = guest1PortalDelegate.getActiveEditorProxy()
+    const guest1BufferProxy = guest1EditorProxy.bufferProxy
+
+    const guest2 = await buildClient()
+    const guest2PortalDelegate = new FakePortalDelegate()
+    const guest2Portal = await guest2.joinPortal(hostPortal.id)
+    guest2Portal.setDelegate(guest2PortalDelegate)
+    const guest2EditorProxy = guest2PortalDelegate.getActiveEditorProxy()
+    const guest2BufferProxy = guest2EditorProxy.bufferProxy
+
+    guest1BufferProxy.requestSave()
+    guest2BufferProxy.requestSave()
+
+    await condition(() => hostBufferDelegate.saveRequestCount === 2)
+  })
+
   suite('leaving, closing, or losing connection to a portal', () => {
     let hostPortal, hostEditorDelegate
     let guest1Portal, guest1PortalDelegate, guest1EditorDelegate
