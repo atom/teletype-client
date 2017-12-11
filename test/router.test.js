@@ -57,6 +57,17 @@ suite('Router', () => {
       'channel-1': [{senderId: 'spoke-1', body: 'from-spoke-1'}],
       'channel-2': [{senderId: 'hub', body: 'from-hub'}]
     }))
+
+    hubRouter.testInbox = []
+    spoke1Router.testInbox = []
+    spoke2Router.testInbox = []
+    spoke2Router.notify({recipientId: 'spoke-1', channelId: 'channel-1', body: 'direct-notification-from-spoke-2'})
+
+    await condition(() => deepEqual(spoke1Router.testInbox, {
+      'channel-1': [{senderId: 'spoke-2', body: 'direct-notification-from-spoke-2'}]
+    }))
+    assert.deepEqual(hubRouter.testInbox, [])
+    assert.deepEqual(spoke2Router.testInbox, [])
   })
 
   test('request/response', async () => {
