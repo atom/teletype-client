@@ -5,6 +5,7 @@ class Buffer {
   constructor (text, {didSetText} = {}) {
     this.text = text
     this.didSetText = didSetText
+    this.saveRequestCount = 0
   }
 
   dispose () {
@@ -50,6 +51,10 @@ class Buffer {
     const endIndex = characterIndexForPosition(this.text, endPosition)
     this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
     return [startPosition, endPosition, '']
+  }
+
+  save () {
+    this.saveRequestCount++
   }
 }
 
