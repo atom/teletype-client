@@ -22,7 +22,7 @@ message PortalUpdate {
 
   message EditorProxySwitch {
     uint32 editor_proxy_id = 1;
-    uint32 buffer_proxy_id = 2;
+    reserved 2; // buffer_proxy_id field is no longer supported
   }
 
   message SiteAssignment {
