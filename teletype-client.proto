@@ -51,7 +51,7 @@ message EditorProxy {
 message EditorProxyUpdate {
   oneof variant {
     SelectionsUpdate selections_update = 1;
-    reserved 2; // tether_update variant is no longer supported
+    // TetherUpdate tether_update = 2; // No longer supported
   }
 
   message SelectionsUpdate {
