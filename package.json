@@ -18,7 +18,7 @@
     "webrtc-adapter": "^4.2.1"
   },
   "devDependencies": {
-    "@atom/teletype-server": "^0.17.0",
+    "@atom/teletype-server": "^0.18.0",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
     "electron": "1.6.11",
