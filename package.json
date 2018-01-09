@@ -15,13 +15,13 @@
     "google-protobuf": "^3.4.0",
     "pusher-js": "^4.1.0",
     "uuid": "^3.1.0",
-    "webrtc-adapter": "^4.2.1"
+    "webrtc-adapter": "^6.0.4"
   },
   "devDependencies": {
     "@atom/teletype-server": "^0.18.0",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
-    "electron": "1.6.11",
+    "electron": "1.7.10",
     "electron-mocha": "^4.0.0"
   }
 }
