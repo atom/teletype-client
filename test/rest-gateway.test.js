@@ -15,7 +15,7 @@ suite('RestGateway', () => {
   })
 
   suite('get', () => {
-    test('successful response', async () => {
+    test('successful request and response', async () => {
       const address = listen(function (request, response) {
          response.writeHead(200, {'Content-Type': 'application/json'})
          response.write('{"a": 1}')
@@ -26,6 +26,18 @@ suite('RestGateway', () => {
       const response = await gateway.get('/')
       assert(response.ok)
       assert.deepEqual(response.body, {a: 1})
+    })
+
+    test('failed request', async () => {
+      const gateway = new RestGateway({baseURL: 'http://localhost:0987654321'})
+      let error
+      try {
+        await gateway.get('/foo/b9e13e6b-9e6e-492c-b4d9-4ec75fd9c2bc/bar')
+      } catch (e) {
+        error = e
+      }
+      assert(error instanceof Errors.HTTPRequestError)
+      assert(error.diagnosticMessage.includes('/foo/REDACTED/bar'))
     })
 
     test('non-JSON response', async () => {
