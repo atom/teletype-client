@@ -195,6 +195,29 @@ suite('Client Integration', () => {
       guest1PortalDelegate.getEditorProxies().length === 0 &&
       guest2PortalDelegate.getEditorProxies().length === 0
     ))
+
+    const hostBufferProxy3 = await hostPortal.createBufferProxy({uri: 'buffer-c', text: ''})
+    const hostEditorProxy3 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy3})
+    hostPortal.activateEditorProxy(hostEditorProxy3)
+
+    const hostBufferProxy4 = await hostPortal.createBufferProxy({uri: 'buffer-d', text: ''})
+    const hostEditorProxy4 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy4})
+    hostPortal.activateEditorProxy(hostEditorProxy4)
+
+    await condition(() => (
+      guest1PortalDelegate.getEditorProxies().length === 2 &&
+      guest2PortalDelegate.getEditorProxies().length === 2
+    ))
+
+    // Ensure active editor proxies of sites that have left the portal are forgotten.
+    guest2Portal.activateEditorProxy(guest2PortalDelegate.editorProxyForURI('buffer-c'))
+    guest2Portal.dispose()
+    const guest3 = await buildClient()
+    const guest3Portal = await guest3.joinPortal(hostPortal.id)
+    const guest3PortalDelegate = new FakePortalDelegate()
+    guest3Portal.setDelegate(guest3PortalDelegate)
+
+    assert.equal(guest3PortalDelegate.getEditorProxies().length, 1)
   })
 
   suite('tethering to other participants', () => {

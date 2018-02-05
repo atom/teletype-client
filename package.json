@@ -1,6 +1,6 @@
 {
   "name": "@atom/teletype-client",
-  "version": "0.30.1",
+  "version": "0.33.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,18 +10,18 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@atom/teletype-crdt": "^0.8.1",
+    "@atom/teletype-crdt": "^0.9.0",
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.4.0",
     "pusher-js": "^4.1.0",
     "uuid": "^3.1.0",
-    "webrtc-adapter": "^4.2.1"
+    "webrtc-adapter": "^6.0.4"
   },
   "devDependencies": {
-    "@atom/teletype-server": "^0.17.0",
+    "@atom/teletype-server": "^0.18.0",
     "deep-equal": "^1.0.1",
     "dotenv": "^4.0.0",
-    "electron": "1.6.11",
+    "electron": "1.7.11",
     "electron-mocha": "^4.0.0"
   }
 }
