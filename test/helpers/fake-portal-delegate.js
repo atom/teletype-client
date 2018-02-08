@@ -7,7 +7,7 @@ class FakePortalDelegate {
     this.hostLostConnection = false
     this.joinEvents = []
     this.leaveEvents = []
-    this.editorProxies = new Set()
+    this.editorProxiesMetadataById = new Map()
     this.tetherEditorProxyChangeCount = 0
     this.tetherPosition = null
     this.activePositionsBySiteId = {}
@@ -37,22 +37,24 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  addEditorProxy (editorProxy) {
-    assert(!this.editorProxies.has(editorProxy), 'Cannot add the same editor proxy multiple times')
-    this.editorProxies.add(editorProxy)
+  addEditorProxy (editorProxyMetadata) {
+    assert(!this.editorProxiesMetadataById.has(editorProxyMetadata.id), 'Cannot add the same editor proxy multiple times')
+
+    this.editorProxiesMetadataById.set(editorProxyMetadata.id, editorProxyMetadata)
   }
 
-  removeEditorProxy (editorProxy) {
-    assert(this.editorProxies.has(editorProxy), 'Can only remove editor proxies that had previously been added')
-    this.editorProxies.delete(editorProxy)
-    if (this.tetherEditorProxy == editorProxy) {
+  removeEditorProxy (editorProxyMetadata) {
+    assert(this.editorProxiesMetadataById.has(editorProxyMetadata.id), 'Can only remove editor proxies that had previously been added')
+
+    this.editorProxiesMetadataById.delete(editorProxyMetadata.id)
+    if (this.tetherEditorProxy && this.tetherEditorProxy.id == editorProxyMetadata.id) {
       this.tetherEditorProxy = null
       this.tetherEditorProxyChangeCount++
     }
   }
 
-  editorProxyForURI (uri) {
-    return Array.from(this.editorProxies).find((e) => e.bufferProxy.uri === uri)
+  editorProxyMetadataForURI (uri) {
+    return Array.from(this.editorProxiesMetadataById.values()).find((e) => e.bufferProxyURI === uri)
   }
 
   getTetherEditorProxy () {
@@ -63,8 +65,8 @@ class FakePortalDelegate {
     return (this.tetherEditorProxy) ? this.tetherEditorProxy.bufferProxy.uri : null
   }
 
-  getEditorProxies () {
-    return Array.from(this.editorProxies)
+  getEditorProxiesCount () {
+    return this.editorProxiesMetadataById.size
   }
 
   updateTether (state, editorProxy, position) {

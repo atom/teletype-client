@@ -160,64 +160,50 @@ suite('Client Integration', () => {
     const guest1Portal = await guest1.joinPortal(hostPortal.id)
     const guest1PortalDelegate = new FakePortalDelegate()
     guest1Portal.setDelegate(guest1PortalDelegate)
-
-    assert.equal(guest1PortalDelegate.getEditorProxies().length, 0)
+    assert.equal(guest1PortalDelegate.getEditorProxiesCount(), 0)
 
     const hostBufferProxy1 = await hostPortal.createBufferProxy({uri: 'buffer-a', text: ''})
     const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
-    hostPortal.activateEditorProxy(hostEditorProxy1)
-
-    await condition(() => guest1PortalDelegate.getEditorProxies().length === 1)
+    hostPortal.addEditorProxy(hostEditorProxy1)
+    await condition(() => guest1PortalDelegate.getEditorProxiesCount() === 1)
 
     const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'buffer-b', text: ''})
     const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
-    hostPortal.activateEditorProxy(hostEditorProxy2)
-
-    await condition(() => guest1PortalDelegate.getEditorProxies().length === 2)
+    hostPortal.addEditorProxy(hostEditorProxy2)
+    await condition(() => guest1PortalDelegate.getEditorProxiesCount() === 2)
 
     const guest2 = await buildClient()
     const guest2Portal = await guest2.joinPortal(hostPortal.id)
     const guest2PortalDelegate = new FakePortalDelegate()
     guest2Portal.setDelegate(guest2PortalDelegate)
-
-    assert.equal(guest2PortalDelegate.getEditorProxies().length, 1)
+    assert.equal(guest2PortalDelegate.getEditorProxiesCount(), 2)
 
     hostPortal.removeEditorProxy(hostEditorProxy1)
-
     await condition(() => (
-      guest1PortalDelegate.getEditorProxies().length === 1 &&
-      guest2PortalDelegate.getEditorProxies().length === 1
+      guest1PortalDelegate.getEditorProxiesCount() === 1 &&
+      guest2PortalDelegate.getEditorProxiesCount() === 1
     ))
 
     hostPortal.removeEditorProxy(hostEditorProxy2)
-
     await condition(() => (
-      guest1PortalDelegate.getEditorProxies().length === 0 &&
-      guest2PortalDelegate.getEditorProxies().length === 0
+      guest1PortalDelegate.getEditorProxiesCount() === 0 &&
+      guest2PortalDelegate.getEditorProxiesCount() === 0
     ))
 
     const hostBufferProxy3 = await hostPortal.createBufferProxy({uri: 'buffer-c', text: ''})
     const hostEditorProxy3 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy3})
-    hostPortal.activateEditorProxy(hostEditorProxy3)
-
-    const hostBufferProxy4 = await hostPortal.createBufferProxy({uri: 'buffer-d', text: ''})
-    const hostEditorProxy4 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy4})
-    hostPortal.activateEditorProxy(hostEditorProxy4)
+    hostPortal.addEditorProxy(hostEditorProxy3)
 
     await condition(() => (
-      guest1PortalDelegate.getEditorProxies().length === 2 &&
-      guest2PortalDelegate.getEditorProxies().length === 2
+      guest1PortalDelegate.getEditorProxiesCount() === 1 &&
+      guest2PortalDelegate.getEditorProxiesCount() === 1
     ))
 
-    // Ensure active editor proxies of sites that have left the portal are forgotten.
-    guest2Portal.activateEditorProxy(guest2PortalDelegate.editorProxyForURI('buffer-c'))
-    guest2Portal.dispose()
     const guest3 = await buildClient()
     const guest3Portal = await guest3.joinPortal(hostPortal.id)
     const guest3PortalDelegate = new FakePortalDelegate()
     guest3Portal.setDelegate(guest3PortalDelegate)
-
-    assert.equal(guest3PortalDelegate.getEditorProxies().length, 1)
+    assert.equal(guest3PortalDelegate.getEditorProxiesCount(), 1)
   })
 
   suite('tethering to other participants', () => {
@@ -497,9 +483,10 @@ suite('Client Integration', () => {
       hostEditorProxy2.setDelegate(hostEditor2Delegate)
       hostPortal.activateEditorProxy(hostEditorProxy2)
 
-      await condition(() => guestPortalDelegate.getEditorProxies().length === 2)
+      await condition(() => guestPortalDelegate.getEditorProxiesCount() === 2)
 
-      const guestEditor2Proxy = guestPortalDelegate.editorProxyForURI('buffer-b')
+      const guestEditor2ProxyMetadata = guestPortalDelegate.editorProxyMetadataForURI('buffer-b')
+      const guestEditor2Proxy = await guestPortal.findOrFetchEditorProxy(guestEditor2ProxyMetadata.id)
       const guestEditor2Delegate = new FakeEditorDelegate()
       guestEditor2Proxy.setDelegate(guestEditor2Delegate)
       guestEditor2Proxy.updateSelections({
@@ -836,7 +823,8 @@ suite('Client Integration', () => {
     ])
 
     // Update active positions after a guest switches to a different editor proxy.
-    const guest1EditorProxy2 = guest1PortalDelegate.editorProxyForURI('buffer-b')
+    const guest1EditorProxy2Metadata = guest1PortalDelegate.editorProxyMetadataForURI('buffer-b')
+    const guest1EditorProxy2 = await guest1Portal.findOrFetchEditorProxy(guest1EditorProxy2Metadata.id)
     guest1Portal.activateEditorProxy(guest1EditorProxy2)
     guest1EditorProxy2.updateSelections({
       1: {range: range([1, 0], [1, 0])}
