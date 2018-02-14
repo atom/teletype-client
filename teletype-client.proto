@@ -10,16 +10,16 @@ message PortalSubscriptionResponse {
   repeated BufferProxy active_buffer_proxies = 5;
   repeated EditorProxy active_editor_proxies = 6;
   map<uint32, uint32> active_editor_proxy_ids_by_site_id = 7;
-  repeated EditorProxyMetadata workspace_editor_proxies_metadata = 8;
+  repeated EditorProxyMetadata editor_proxies_metadata = 8;
 }
 
 message PortalUpdate {
   oneof variant {
     EditorProxySwitch editor_proxy_switch = 1;
     SiteAssignment site_assignment = 2;
-    EditorProxyRemoval editor_proxy_removal = 3;
+    // EditorProxyRemoval editor_proxy_removal = 3; // No longer supported
     Tether tether_update = 4;
-    EditorProxyInsertion editor_proxy_insertion = 5;
+    EditorProxyCreation editor_proxy_creation = 5;
   }
 
   message EditorProxySwitch {
@@ -36,7 +36,7 @@ message PortalUpdate {
     uint32 editor_proxy_id = 1;
   }
 
-  message EditorProxyInsertion {
+  message EditorProxyCreation {
     EditorProxyMetadata editor_proxy_metadata = 1;
   }
 }

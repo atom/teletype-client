@@ -7,10 +7,10 @@ class FakePortalDelegate {
     this.hostLostConnection = false
     this.joinEvents = []
     this.leaveEvents = []
-    this.editorProxiesMetadataById = new Map()
     this.tetherEditorProxyChangeCount = 0
     this.tetherPosition = null
     this.activePositionsBySiteId = {}
+    this.editorProxiesChangeEventCount = 0
   }
 
   dispose () {
@@ -37,36 +37,12 @@ class FakePortalDelegate {
     return this.hostLostConnection
   }
 
-  addEditorProxy (editorProxyMetadata) {
-    assert(!this.editorProxiesMetadataById.has(editorProxyMetadata.id), 'Cannot add the same editor proxy multiple times')
-
-    this.editorProxiesMetadataById.set(editorProxyMetadata.id, editorProxyMetadata)
-  }
-
-  removeEditorProxy (editorProxyMetadata) {
-    assert(this.editorProxiesMetadataById.has(editorProxyMetadata.id), 'Can only remove editor proxies that had previously been added')
-
-    this.editorProxiesMetadataById.delete(editorProxyMetadata.id)
-    if (this.tetherEditorProxy && this.tetherEditorProxy.id == editorProxyMetadata.id) {
-      this.tetherEditorProxy = null
-      this.tetherEditorProxyChangeCount++
-    }
-  }
-
-  editorProxyMetadataForURI (uri) {
-    return Array.from(this.editorProxiesMetadataById.values()).find((e) => e.bufferProxyURI === uri)
-  }
-
   getTetherEditorProxy () {
     return this.tetherEditorProxy
   }
 
   getTetherBufferProxyURI () {
     return (this.tetherEditorProxy) ? this.tetherEditorProxy.bufferProxy.uri : null
-  }
-
-  getEditorProxiesCount () {
-    return this.editorProxiesMetadataById.size
   }
 
   updateTether (state, editorProxy, position) {
@@ -103,5 +79,9 @@ class FakePortalDelegate {
 
   siteDidLeave (siteId) {
     this.leaveEvents.push(siteId)
+  }
+
+  didChangeEditorProxies () {
+    this.editorProxiesChangeEventCount++
   }
 }

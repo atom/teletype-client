@@ -223,7 +223,7 @@ suite('Portal', () => {
       const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
 
       hostPortal.activateEditorProxy(hostEditorProxy1)
-      await condition(() => guestPortal.testDelegate.editorProxyMetadataForURI('uri-1'))
+      await condition(() => guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-1')
       const guestEditorProxy1 = guestPortal.testDelegate.getTetherEditorProxy()
 
       hostEditorProxy1.dispose()
@@ -233,7 +233,7 @@ suite('Portal', () => {
       const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
       hostPortal.activateEditorProxy(hostEditorProxy2)
-      await condition(() => guestPortal.testDelegate.editorProxyMetadataForURI('uri-2'))
+      await condition(() => guestPortal.getEditorProxiesMetadata().find((e) => e.bufferProxyURI === 'uri-2'))
     })
   })
 
