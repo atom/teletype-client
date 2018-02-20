@@ -10,19 +10,21 @@ message PortalSubscriptionResponse {
   repeated BufferProxy active_buffer_proxies = 5;
   repeated EditorProxy active_editor_proxies = 6;
   map<uint32, uint32> active_editor_proxy_ids_by_site_id = 7;
+  repeated EditorProxyMetadata editor_proxies_metadata = 8;
 }
 
 message PortalUpdate {
   oneof variant {
     EditorProxySwitch editor_proxy_switch = 1;
     SiteAssignment site_assignment = 2;
-    EditorProxyRemoval editor_proxy_removal = 3;
+    // EditorProxyRemoval editor_proxy_removal = 3; // No longer supported
     Tether tether_update = 4;
+    EditorProxyCreation editor_proxy_creation = 5;
   }
 
   message EditorProxySwitch {
     uint32 editor_proxy_id = 1;
-    uint32 buffer_proxy_id = 2;
+    reserved 2; // buffer_proxy_id field is no longer supported
   }
 
   message SiteAssignment {
@@ -32,6 +34,10 @@ message PortalUpdate {
 
   message EditorProxyRemoval {
     uint32 editor_proxy_id = 1;
+  }
+
+  message EditorProxyCreation {
+    EditorProxyMetadata editor_proxy_metadata = 1;
   }
 }
 
@@ -46,6 +52,12 @@ message EditorProxy {
   uint32 buffer_proxy_id = 2;
   map<uint32, uint32> selection_layer_ids_by_site_id = 3;
   reserved 4; // tethers_by_follower_id field is no longer supported
+}
+
+message EditorProxyMetadata {
+  uint32 id = 1;
+  uint32 buffer_proxy_id = 2;
+  string buffer_proxy_uri = 3;
 }
 
 message EditorProxyUpdate {

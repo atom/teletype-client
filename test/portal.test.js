@@ -133,7 +133,7 @@ suite('Portal', () => {
       guestPortal.testDelegate.tetherEditorProxyChangeCount = 0
 
       // Don't notify guests when setting the active editor proxy to the same value it currently has.
-      hostPortal.activateEditorProxy(hostPortal.testDelegate.getTetherEditorProxy())
+      hostPortal.activateEditorProxy(null)
 
       // Set the active editor proxy to a different value to ensure guests are notified only of this change.
       const originalBufferProxy = await hostPortal.createBufferProxy({uri: 'original-uri', text: ''})
@@ -223,8 +223,8 @@ suite('Portal', () => {
       const hostEditorProxy1 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy1})
 
       hostPortal.activateEditorProxy(hostEditorProxy1)
-      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-1'))
-      const guestEditorProxy1 = guestPortal.testDelegate.editorProxyForURI('uri-1')
+      await condition(() => guestPortal.testDelegate.getTetherBufferProxyURI() === 'uri-1')
+      const guestEditorProxy1 = guestPortal.testDelegate.getTetherEditorProxy()
 
       hostEditorProxy1.dispose()
       guestPortal.activateEditorProxy(null)
@@ -233,7 +233,7 @@ suite('Portal', () => {
       const hostBufferProxy2 = await hostPortal.createBufferProxy({uri: 'uri-2', text: ''})
       const hostEditorProxy2 = await hostPortal.createEditorProxy({bufferProxy: hostBufferProxy2})
       hostPortal.activateEditorProxy(hostEditorProxy2)
-      await condition(() => guestPortal.testDelegate.editorProxyForURI('uri-2'))
+      await condition(() => guestPortal.getEditorProxiesMetadata().find((e) => e.bufferProxyURI === 'uri-2'))
     })
   })
 
