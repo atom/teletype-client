@@ -849,6 +849,14 @@ suite('Client Integration', () => {
       {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
     ])
 
+    // Update active positions after participant switches focus to something outside of the portal.
+    hostPortal.activateEditorProxy(null)
+
+    await assertActivePositions([
+      {siteId: 1, editorProxyId: null, position: null},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+    ])
+
     function assertActivePositions (expectedPositions) {
       const alivePortals = portals.filter((p) => !p.disposed)
       return condition(() =>
