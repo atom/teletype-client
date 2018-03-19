@@ -69,7 +69,8 @@ class FakePortalDelegate {
   getActivePositions () {
     return Object.keys(this.activePositionsBySiteId).map((siteId) => {
       const {editorProxy, position} = this.activePositionsBySiteId[siteId]
-      return {siteId, editorProxyId: editorProxy.id, position}
+      const editorProxyId = editorProxy ? editorProxy.id : null
+      return {siteId, editorProxyId, position}
     })
   }
 
