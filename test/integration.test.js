@@ -909,6 +909,32 @@ suite('Client Integration', () => {
     await condition(() => guestBufferProxy.delegate.isDisposed())
   })
 
+  test('changing buffer proxy uri', async () => {
+    const host = await buildClient()
+    const hostPortal = await host.createPortal()
+    const guest = await buildClient()
+    const guestPortal = await guest.joinPortal(hostPortal.id)
+
+    const hostBuffer1Proxy = await hostPortal.createBufferProxy({uri: 'buffer1-a', text: ''})
+    const hostEditor1Proxy = await hostPortal.createEditorProxy({bufferProxy: hostBuffer1Proxy, selections: {}})
+    const hostBuffer2Proxy = await hostPortal.createBufferProxy({uri: 'buffer2-a', text: ''})
+    const hostEditor2Proxy = await hostPortal.createEditorProxy({bufferProxy: hostBuffer2Proxy, selections: {}})
+
+    const guestEditor1Proxy = await guestPortal.findOrFetchEditorProxy(hostEditor1Proxy.id)
+    const guestBuffer1Proxy = guestEditor1Proxy.bufferProxy
+    guestBuffer1Proxy.setDelegate(new FakeBufferDelegate())
+    assert.equal(guestBuffer1Proxy.uri, 'buffer1-a')
+    assert.equal(guestPortal.getEditorProxyMetadata(hostEditor1Proxy.id).bufferProxyURI, 'buffer1-a')
+    assert.equal(guestPortal.getEditorProxyMetadata(hostEditor2Proxy.id).bufferProxyURI, 'buffer2-a')
+
+    hostBuffer1Proxy.setURI('buffer1-b')
+    hostBuffer2Proxy.setURI('buffer2-b')
+    await condition(() => guestBuffer1Proxy.delegate.uriChangeCount === 1)
+    assert.equal(guestBuffer1Proxy.uri, 'buffer1-b')
+    assert.equal(guestPortal.getEditorProxyMetadata(hostEditor1Proxy.id).bufferProxyURI, 'buffer1-b')
+    assert.equal(guestPortal.getEditorProxyMetadata(hostEditor2Proxy.id).bufferProxyURI, 'buffer2-b')
+  })
+
   test('save requests', async () => {
     const host = await buildClient()
     const hostPortal = await host.createPortal()
