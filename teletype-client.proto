@@ -78,7 +78,20 @@ message BufferProxy {
 }
 
 message BufferProxyUpdate {
-  repeated Operation operations = 1;
+  reserved 1; // operations field is no longer supported; use OperationsUpdate instead
+
+  oneof variant {
+    OperationsUpdate operations_update = 2;
+    URIUpdate uri_update = 3;
+  }
+
+  message OperationsUpdate {
+    repeated Operation operations = 1;
+  }
+
+  message URIUpdate {
+    string uri = 1;
+  }
 }
 
 message RouterMessage {

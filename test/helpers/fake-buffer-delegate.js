@@ -6,6 +6,7 @@ class Buffer {
     this.text = text
     this.didSetText = didSetText
     this.saveRequestCount = 0
+    this.uriChangeCount = 0
   }
 
   dispose () {
@@ -51,6 +52,10 @@ class Buffer {
     const endIndex = characterIndexForPosition(this.text, endPosition)
     this.text = this.text.slice(0, startIndex) + this.text.slice(endIndex)
     return [startPosition, endPosition, '']
+  }
+
+  didChangeURI () {
+    this.uriChangeCount++
   }
 
   save () {
