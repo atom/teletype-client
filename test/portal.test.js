@@ -123,6 +123,29 @@ suite('Portal', () => {
     assert.equal(guest2Portal.getSiteIdentity(3).login, guest2Identity.login)
   })
 
+  test('notifying delegate of active position of other sites', async () => {
+    const hostPeerPool = await buildPeerPool('host', server)
+    const guestPeerPool = await buildPeerPool('guest', server)
+    const hostPortal = await buildPortal('portal', hostPeerPool)
+    const guestPortal = await buildPortal('portal', guestPeerPool, 'host')
+
+    const joinPromise = guestPortal.join()
+    await guestPortal.networkConnectionPromise
+
+    const bufferProxy = await hostPortal.createBufferProxy({uri: 'uri', text: ''})
+    const editorProxy = await hostPortal.createEditorProxy({bufferProxy})
+    hostPortal.activateEditorProxy(editorProxy)
+
+    // Guest has only partially joined, so it's not yet an active site.
+    let activeSiteIds = Object.keys(hostPortal.testDelegate.activePositionsBySiteId)
+    assert.deepEqual(activeSiteIds, ['1'])
+
+    // When guest finally joins, it becomes an active site.
+    await joinPromise
+    activeSiteIds = Object.keys(hostPortal.testDelegate.activePositionsBySiteId)
+    assert.deepEqual(activeSiteIds, ['1', '2'])
+  })
+
   suite('changing active editor proxy', () => {
     test('host only notifies guests when active editor proxy has changed', async () => {
       const hostPeerPool = await buildPeerPool('host', server)
