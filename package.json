@@ -14,7 +14,7 @@
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.5.0",
     "pusher-js": "^4.1.0",
-    "uuid": "^3.1.0",
+    "uuid": "^3.2.1",
     "webrtc-adapter": "^6.0.4"
   },
   "devDependencies": {
