@@ -787,18 +787,17 @@ suite('Client Integration', () => {
     })
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
-      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 4)},
-      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 4), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 4), followState: FollowState.RETRACTED},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 4), followState: FollowState.RETRACTED}
     ])
-
     // Update active positions after a text change.
     hostBufferProxy1.setTextInRange(point(4, 0), point(4, 0), 'X')
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
-      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
-      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 5)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(4, 5), followState: FollowState.RETRACTED},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(4, 5), followState: FollowState.RETRACTED}
     ])
 
     // Update active positions after the leader changes.
@@ -808,9 +807,9 @@ suite('Client Integration', () => {
     guest2Portal.follow(guest1Portal.siteId)
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5)},
-      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
-      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy1.id, position: point(4, 5), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4), followState: FollowState.EXTENDED},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4), followState: FollowState.RETRACTED}
     ])
 
     // Update active positions after host switches to a different editor proxy.
@@ -822,9 +821,9 @@ suite('Client Integration', () => {
     hostPortal.activateEditorProxy(hostEditorProxy2)
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
-      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4)},
-      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4)}
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy1.id, position: point(5, 4), followState: FollowState.DISCONNECTED},
+      {siteId: 3, editorProxyId: hostEditorProxy1.id, position: point(5, 4), followState: FollowState.RETRACTED}
     ])
 
     // Update active positions after a guest switches to a different editor proxy.
@@ -836,25 +835,25 @@ suite('Client Integration', () => {
     }, {initialUpdate: true})
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
-      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)},
-      {siteId: 3, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0), followState: FollowState.DISCONNECTED},
+      {siteId: 3, editorProxyId: hostEditorProxy2.id, position: point(1, 0), followState: FollowState.RETRACTED}
     ])
 
     // Update active positions after a site disconnects.
     guest2Portal.dispose()
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2)},
-      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+      {siteId: 1, editorProxyId: hostEditorProxy2.id, position: point(2, 2), followState: FollowState.DISCONNECTED},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0), followState: FollowState.DISCONNECTED}
     ])
 
     // Update active positions after participant switches focus to something outside of the portal.
     hostPortal.activateEditorProxy(null)
 
     await assertActivePositions([
-      {siteId: 1, editorProxyId: null, position: null},
-      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0)}
+      {siteId: 1, editorProxyId: null, position: null, followState: null},
+      {siteId: 2, editorProxyId: hostEditorProxy2.id, position: point(1, 0), followState: FollowState.DISCONNECTED}
     ])
 
     function assertActivePositions (expectedPositions) {
