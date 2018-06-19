@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "electron-mocha **/*.test.js --ui=tdd --renderer --enable-experimental-web-platform-features",
+    "test:node": "mocha **/*.test.js --ui=tdd",
     "compile-protobuf": "protoc --js_out=import_style=commonjs,binary:lib teletype-client.proto teletype-crdt.proto"
   },
   "author": "",
