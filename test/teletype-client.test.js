@@ -3,6 +3,10 @@ const assert = require('assert')
 const Errors = require('../lib/errors')
 const TeletypeClient = require('../lib/teletype-client')
 
+if (typeof ErrorEvent === 'undefined') {
+  ErrorEvent = Error;
+}
+
 suite('TeletypeClient', () => {
   suite('initialize', () => {
     test('throws when the protocol version is out of date according to the server', async () => {
