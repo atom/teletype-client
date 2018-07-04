@@ -14,6 +14,7 @@
     "event-kit": "^2.3.0",
     "google-protobuf": "^3.5.0",
     "pusher-js": "^4.2.2",
+    "socketcluster-client": "^13.0.0",
     "uuid": "^3.2.1",
     "webrtc-adapter": "~6.1"
   },

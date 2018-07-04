@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  test-database:
+    image: postgres
+    ports:
+     - 5433:5432
+    volumes:
+     - ./test-database:/var/lib/postgresql/data
+    restart: always
+    environment:
+      POSTGRES_USER: teletype
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: teletype-server-test
+    networks:
+      teletype:
+
+networks:
+  teletype:
