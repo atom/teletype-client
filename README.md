@@ -1,4 +1,5 @@
-# teletype-client
+##### Atom and all repositories under Atom will be archived on December 15, 2022. Learn more in our [official announcement](https://github.blog/2022-06-08-sunsetting-atom/)
+ # teletype-client
 
 The editor-agnostic library managing the interaction with other clients to support peer-to-peer collaborative editing in [Teletype for Atom](https://github.com/atom/teletype).
 
