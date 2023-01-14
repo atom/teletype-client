@@ -30,6 +30,13 @@ To run teletype-client tests locally, you'll first need to have:
     npm test
     ```
 
+3. Create postgresql docker instance:
+
+    ```
+    docker-compose up -d
+    cp .env.local.example .env
+    ```
+
 ## TODO
 
 * [ ] Document APIs
